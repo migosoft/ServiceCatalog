@@ -69,6 +69,10 @@ public class Neo4jService : IDisposable
             props["os"] = SanitizeOs(req.OperatingSystem);
         if (!string.IsNullOrWhiteSpace(req.Owner))
             props["owner"] = req.Owner;
+        if (!string.IsNullOrWhiteSpace(req.Address))
+            props["address"] = req.Address;
+        if (type == "Database" && !string.IsNullOrWhiteSpace(req.DbType))
+            props["db_type"] = req.DbType;
         await using var session = _driver.AsyncSession();
         var result = await session.RunAsync(
             $"CREATE (n:{type} $props) " +
@@ -86,11 +90,13 @@ public class Neo4jService : IDisposable
         var result = await session.RunAsync(
             "MATCH (n) WHERE elementId(n) = $id " +
             "SET n.name = $name, n.description = $description " +
-            "SET n.owner = CASE WHEN $owner <> '' THEN $owner ELSE null END " +
+            "SET n.owner   = CASE WHEN $owner   <> '' THEN $owner   ELSE null END " +
+            "SET n.address = CASE WHEN $address <> '' THEN $address ELSE null END " +
+            "SET n.db_type = CASE WHEN n:Database AND $dbType <> '' THEN $dbType ELSE null END " +
             "FOREACH (_ IN CASE WHEN n:Server AND $os <> '' THEN [1] ELSE [] END | SET n.os = $os) " +
             "FOREACH (_ IN CASE WHEN n:Server AND $os = '' THEN [1] ELSE [] END | REMOVE n.os) " +
             "RETURN elementId(n) AS id, labels(n)[0] AS type, n.name AS name, n.description AS description, properties(n) AS props",
-            new { id, name = req.Name, description = req.Description ?? "", os, owner });
+            new { id, name = req.Name, description = req.Description ?? "", os, owner, address = req.Address?.Trim() ?? "", dbType = req.DbType?.Trim() ?? "" });
         var records = await result.ToListAsync(MapNode);
         return records.FirstOrDefault();
     }

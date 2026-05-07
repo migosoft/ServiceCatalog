@@ -64,6 +64,24 @@
                 @change="patch('owner', ($event.target as HTMLInputElement).value)"
               />
             </div>
+            <div class="editable-row">
+              <label class="er-label">Address</label>
+              <input
+                :value="node.properties?.['address'] ?? ''"
+                class="er-input"
+                placeholder="—"
+                @change="patch('address', ($event.target as HTMLInputElement).value)"
+              />
+            </div>
+            <div v-if="node.type === 'Database'" class="editable-row">
+              <label class="er-label">Type</label>
+              <input
+                :value="node.properties?.['db_type'] ?? ''"
+                class="er-input"
+                placeholder="e.g. PostgreSQL"
+                @change="patch('db_type', ($event.target as HTMLInputElement).value)"
+              />
+            </div>
             <div v-if="node.type === 'Server'" class="editable-row">
               <label class="er-label">OS</label>
               <select

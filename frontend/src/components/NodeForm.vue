@@ -49,6 +49,18 @@
             <input v-model="form.owner" class="field-input" placeholder="team or person responsible" />
           </div>
 
+          <!-- Address -->
+          <div class="field">
+            <label class="field-label">Address</label>
+            <input v-model="form.address" class="field-input" placeholder="hostname, IP or URL" />
+          </div>
+
+          <!-- DB Type (Database only) -->
+          <div v-if="form.type === 'Database'" class="field">
+            <label class="field-label">Type</label>
+            <input v-model="form.dbType" class="field-input" placeholder="e.g. PostgreSQL, MySQL, Redis" />
+          </div>
+
           <!-- Description -->
           <div class="field">
             <label class="field-label">Description</label>
@@ -92,8 +104,10 @@ const form = reactive({
   type: props.node?.type ?? 'Service',
   name: props.node?.name ?? '',
   description: props.node?.description ?? '',
-  os: props.node?.properties?.['os'] ?? 'Linux',
-  owner: props.node?.properties?.['owner'] ?? '',
+  os:      props.node?.properties?.['os']      ?? 'Linux',
+  owner:   props.node?.properties?.['owner']   ?? '',
+  address: props.node?.properties?.['address'] ?? '',
+  dbType:  props.node?.properties?.['db_type'] ?? '',
 })
 
 async function submit() {
@@ -101,12 +115,14 @@ async function submit() {
   error.value = null
   try {
     let saved: NodeDto
-    const os    = form.type === 'Server' ? form.os : undefined
-    const owner = form.owner.trim() || undefined
+    const os      = form.type === 'Server'   ? form.os              : undefined
+    const owner   = form.owner.trim()   || undefined
+    const address = form.address.trim() || undefined
+    const dbType  = form.type === 'Database' ? form.dbType.trim() || undefined : undefined
     if (props.node) {
-      saved = await store.updateNode(props.node.id, { name: form.name, description: form.description, operatingSystem: os, owner })
+      saved = await store.updateNode(props.node.id, { name: form.name, description: form.description, operatingSystem: os, owner, address, dbType })
     } else {
-      saved = await store.createNode({ type: form.type, name: form.name, description: form.description, operatingSystem: os, owner })
+      saved = await store.createNode({ type: form.type, name: form.name, description: form.description, operatingSystem: os, owner, address, dbType })
     }
     emit('saved', saved)
     emit('close')

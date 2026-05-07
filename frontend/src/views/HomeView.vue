@@ -183,11 +183,20 @@ async function onSidebarSelect(id: string) {
 async function onPatchNode(id: string, data: Partial<NodeDto>) {
   const node = store.nodes.find(n => n.id === id)
   if (!node) return
-  const name            = (data.name as string | undefined) ?? node.name
-  const description     = (data.description as string | undefined) ?? node.description
-  const owner           = ('owner' in data ? data.owner as string : node.properties?.['owner']) ?? ''
-  const operatingSystem = ('os' in data ? (data as any).os as string : node.properties?.['os']) ?? ''
-  await store.updateNode(id, { name, description, operatingSystem: operatingSystem || undefined, owner: owner || undefined })
+  const d = data as any
+  const name            = d.name            ?? node.name
+  const description     = d.description     ?? node.description
+  const owner           = ('owner'   in d ? d.owner   : node.properties?.['owner'])   ?? ''
+  const operatingSystem = ('os'      in d ? d.os      : node.properties?.['os'])      ?? ''
+  const address         = ('address' in d ? d.address : node.properties?.['address']) ?? ''
+  const dbType          = ('db_type' in d ? d.db_type : node.properties?.['db_type']) ?? ''
+  await store.updateNode(id, {
+    name, description,
+    operatingSystem: operatingSystem || undefined,
+    owner:   owner   || undefined,
+    address: address || undefined,
+    dbType:  dbType  || undefined,
+  })
 }
 
 // Node form
