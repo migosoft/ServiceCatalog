@@ -33,7 +33,8 @@
                 v-for="r in RELATION_TYPES"
                 :key="r.value"
                 type="button"
-                :class="['rel-card', { active: form.relationType === r.value }]"
+                :class="['rel-card', { active: form.relationType === r.value, disabled: r.value === 'RUNS_ON' && !runsOnAllowed }]"
+                :disabled="r.value === 'RUNS_ON' && !runsOnAllowed"
                 @click="form.relationType = r.value"
               >
                 <span class="rel-badge" :style="{ background: `var(--c-${r.value.toLowerCase().replace('_', '-')})` }" />
@@ -73,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, watch } from 'vue'
 import { useCatalogStore } from '@/stores/catalog'
 import type { EdgeDto } from '@/api/catalog'
 
@@ -87,14 +88,27 @@ const error = ref<string | null>(null)
 const TYPE_ORDER = ['Service', 'Server', 'Database'] as const
 
 const RELATION_TYPES = [
-  { value: 'RUNS_ON', hint: 'service runs on a server' },
-  { value: 'REQUIRES', hint: 'service depends on a service or db' },
+  { value: 'RUNS_ON',  hint: 'service or database → server only' },
+  { value: 'REQUIRES', hint: 'any node depends on another' },
 ] as const
 
 const form = reactive({
   fromId: props.defaultFromId ?? '',
   toId: props.defaultToId ?? '',
   relationType: 'RUNS_ON',
+})
+
+// RUNS_ON is only valid: from ∈ {Service, Database} → to = Server
+const runsOnAllowed = computed(() => {
+  const from = store.nodes.find(n => n.id === form.fromId)
+  const to   = store.nodes.find(n => n.id === form.toId)
+  if (from && from.type === 'Server') return false
+  if (to   && to.type   !== 'Server') return false
+  return true
+})
+
+watch(runsOnAllowed, allowed => {
+  if (!allowed && form.relationType === 'RUNS_ON') form.relationType = 'REQUIRES'
 })
 
 const grouped = computed(() => {
@@ -106,6 +120,10 @@ const grouped = computed(() => {
 
 async function submit() {
   if (form.fromId === form.toId) { error.value = 'Source and target must differ.'; return }
+  if (form.relationType === 'RUNS_ON' && !runsOnAllowed.value) {
+    error.value = 'RUNS_ON is only valid from a Service or Database to a Server.'
+    return
+  }
   submitting.value = true
   error.value = null
   try {
@@ -160,6 +178,7 @@ async function submit() {
 }
 .rel-card:hover { background: var(--c-panel-2); }
 .rel-card.active { background: var(--c-panel-2); border-color: var(--c-text); }
+.rel-card.disabled { opacity: .38; cursor: not-allowed; }
 .rel-badge { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .rel-card-content { display: flex; flex-direction: column; gap: 2px; }
 .rel-name { font-size: 12px; font-weight: 600; font-family: var(--font-mono); }

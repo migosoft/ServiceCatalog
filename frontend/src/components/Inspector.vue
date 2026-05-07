@@ -41,7 +41,6 @@
           <div class="readonly-rows">
             <div class="readonly-row"><span class="rr-key">id</span><span class="rr-val">{{ node.id }}</span></div>
             <div class="readonly-row"><span class="rr-key">type</span><span class="rr-val">{{ node.type }}</span></div>
-            <div v-if="node.properties?.['os']" class="readonly-row"><span class="rr-key">os</span><span class="rr-val">{{ node.properties['os'] }}</span></div>
           </div>
         </div>
 
@@ -64,6 +63,18 @@
                 placeholder="—"
                 @change="patch('owner', ($event.target as HTMLInputElement).value)"
               />
+            </div>
+            <div v-if="node.type === 'Server'" class="editable-row">
+              <label class="er-label">OS</label>
+              <select
+                :value="node.properties?.['os'] ?? ''"
+                class="er-input er-select"
+                @change="patch('os', ($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">—</option>
+                <option value="Windows">Windows</option>
+                <option value="Linux">Linux</option>
+              </select>
             </div>
             <div class="editable-row">
               <label class="er-label">Description</label>
@@ -254,6 +265,7 @@ function patch(key: string, value: string) {
 .er-input:hover { background: var(--c-panel-2); border-color: var(--c-divider); }
 .er-input:focus { background: var(--c-panel); border-color: var(--c-accent); }
 .er-textarea { resize: vertical; min-height: 44px; line-height: 1.4; }
+.er-select { cursor: pointer; }
 .conn-list { display: flex; flex-direction: column; gap: 4px; }
 .conn-row {
   display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;

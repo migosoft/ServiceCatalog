@@ -23,6 +23,7 @@
 
       <main class="main-area">
         <GraphCanvas
+          ref="graphCanvas"
           v-show="view === 'graph'"
           :nodes="displayNodes"
           :edges="displayEdges"
@@ -95,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
 import { useCatalogStore } from '@/stores/catalog'
 import type { NodeDto, EdgeDto, GraphDto } from '@/api/catalog'
 import TopBar from '@/components/TopBar.vue'
@@ -107,6 +108,7 @@ import NodeForm from '@/components/NodeForm.vue'
 import EdgeForm from '@/components/EdgeForm.vue'
 
 const store = useCatalogStore()
+const graphCanvas = ref<{ focusNode: (id: string) => void } | null>(null)
 
 // View state
 const view = ref<'graph' | 'grid'>('graph')
@@ -174,16 +176,18 @@ async function onNodeClick(id: string) {
 
 async function onSidebarSelect(id: string) {
   selectedId.value = id
+  if (view.value === 'graph') graphCanvas.value?.focusNode(id)
 }
 
 // Patch node fields inline from Inspector
 async function onPatchNode(id: string, data: Partial<NodeDto>) {
   const node = store.nodes.find(n => n.id === id)
   if (!node) return
-  const name        = (data.name as string | undefined) ?? node.name
-  const description = (data.description as string | undefined) ?? node.description
-  const owner       = ('owner' in data ? data.owner as string : node.properties?.['owner']) ?? ''
-  await store.updateNode(id, { name, description, operatingSystem: node.properties?.['os'], owner: owner || undefined })
+  const name            = (data.name as string | undefined) ?? node.name
+  const description     = (data.description as string | undefined) ?? node.description
+  const owner           = ('owner' in data ? data.owner as string : node.properties?.['owner']) ?? ''
+  const operatingSystem = ('os' in data ? (data as any).os as string : node.properties?.['os']) ?? ''
+  await store.updateNode(id, { name, description, operatingSystem: operatingSystem || undefined, owner: owner || undefined })
 }
 
 // Node form

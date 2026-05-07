@@ -1,0 +1,70 @@
+# ── .NET ──────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+*.pidb
+TestResults/
+*.ncrunch*
+*.DotSettings.user
+
+# .NET publish / packaging
+publish/
+*.nupkg
+*.snupkg
+
+# ── Secrets / environment ─────────────────────────
+.env
+.env.local
+.env.*.local
+appsettings.Production.json
+appsettings.Staging.json
+secrets.json
+
+# ── Node / frontend ───────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.tsbuildinfo
+.eslintcache
+
+# Test outputs
+coverage/
+playwright-report/
+test-results/
+__screenshots__/
+/cypress/videos/
+/cypress/screenshots/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Vite / Vitest
+*.timestamp-*.mjs
+
+# ── IDEs ─────────────────────────────────────────
+# JetBrains (Rider / WebStorm)
+.idea/
+*.sln.DotSettings
+
+# VS Code (keep shared extensions list, ignore personal settings)
+.vscode/*
+!.vscode/extensions.json
+
+# ── OS ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Claude IDE ───────────────────────────────────
+.claude/settings.local.json
+
+# ── Docker ───────────────────────────────────────
+docker-compose.override.yml

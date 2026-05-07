@@ -148,8 +148,15 @@
       </button>
     </div>
 
-    <!-- Zoom % indicator (bottom-right) -->
-    <div class="zoom-pct">{{ Math.round(vp.k * 100) }}%</div>
+    <!-- Zoom % indicator + reset (bottom-right) -->
+    <div class="zoom-pct">
+      <span>{{ Math.round(vp.k * 100) }}%</span>
+      <button class="zoom-reset-btn" title="Reset zoom to 100%" @click="resetZoom">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+        </svg>
+      </button>
+    </div>
 
     <!-- Mini-map (bottom-left) -->
     <div v-if="props.nodes.length > 1" class="minimap">
@@ -483,6 +490,15 @@ function fitView() {
   vp.k = k
 }
 
+// ── Focus node (called externally) ───────────────────────────────────────────
+function focusNode(id: string) {
+  const p = positions[id]
+  if (!p || !size.w || !size.h) return
+  vp.x = size.w / 2 - p.x * vp.k
+  vp.y = size.h / 2 - p.y * vp.k
+  clickedId.value = id
+}
+
 // ── Zoom controls ────────────────────────────────────────────────────────────
 function _zoomAt(factor: number, cx = size.w / 2, cy = size.h / 2) {
   const k2 = Math.max(0.15, Math.min(2.5, vp.k * factor))
@@ -491,8 +507,9 @@ function _zoomAt(factor: number, cx = size.w / 2, cy = size.h / 2) {
   vp.y = cy - (cy - vp.y) * r
   vp.k = k2
 }
-function zoomIn()  { _zoomAt(1.25) }
-function zoomOut() { _zoomAt(0.8) }
+function zoomIn()    { _zoomAt(1.25) }
+function zoomOut()   { _zoomAt(0.8) }
+function resetZoom() { _zoomAt(1 / vp.k) }
 
 // ── Wheel ────────────────────────────────────────────────────────────────────
 function onWheel(e: WheelEvent) {
@@ -593,6 +610,8 @@ watch(() => props.layout, () => {
   _startSim()
   setTimeout(() => fitView(), 400)
 })
+
+defineExpose({ focusNode })
 </script>
 
 <style scoped>
@@ -629,13 +648,20 @@ watch(() => props.layout, () => {
 .zoom-sep { height: 1px; background: v-bind('palette.divider'); }
 .zoom-pct {
   position: absolute; right: 16px; bottom: 16px; z-index: 10;
+  display: flex; align-items: center; gap: 4px;
   font-size: 11px; font-family: var(--font-mono);
   color: v-bind('palette.muted');
   background: v-bind('palette.panel');
   border: 1px solid v-bind('palette.divider');
-  border-radius: 6px; padding: 3px 8px;
-  pointer-events: none;
+  border-radius: 6px; padding: 3px 4px 3px 8px;
 }
+.zoom-reset-btn {
+  width: 20px; height: 20px; border: 0; padding: 0; border-radius: 4px;
+  background: transparent; color: v-bind('palette.muted');
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .1s, color .1s;
+}
+.zoom-reset-btn:hover { background: v-bind('palette.panel2'); color: v-bind('palette.text'); }
 .minimap {
   position: absolute; left: 16px; bottom: 16px; z-index: 10;
   background: v-bind('palette.panel');

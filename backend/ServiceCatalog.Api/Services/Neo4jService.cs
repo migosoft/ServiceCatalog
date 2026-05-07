@@ -118,6 +118,29 @@ public class Neo4jService : IDisposable
     {
         var rel = SanitizeRelation(req.RelationType);
         await using var session = _driver.AsyncSession();
+
+        if (rel == "RUNS_ON")
+        {
+            var check = await session.RunAsync(
+                "MATCH (a) WHERE elementId(a) = $fromId " +
+                "MATCH (b) WHERE elementId(b) = $toId " +
+                "RETURN labels(a)[0] AS fromType, labels(b)[0] AS toType",
+                new { fromId = req.FromId, toId = req.ToId });
+            var row = (await check.ToListAsync(r => new {
+                fromType = r["fromType"].As<string>(),
+                toType   = r["toType"].As<string>(),
+            })).FirstOrDefault();
+
+            if (row == null)
+                throw new InvalidOperationException("One or both nodes not found.");
+
+            if (row.fromType != "Service" && row.fromType != "Database")
+                throw new ArgumentException("RUNS_ON is only valid from a Service or Database node.");
+
+            if (row.toType != "Server")
+                throw new ArgumentException("RUNS_ON is only valid to a Server node.");
+        }
+
         var result = await session.RunAsync(
             $"MATCH (a) WHERE elementId(a) = $fromId " +
             $"MATCH (b) WHERE elementId(b) = $toId " +
