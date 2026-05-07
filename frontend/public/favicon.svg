@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 138 128" fill="none">
+  <style>
+    .c { stroke: #1A1815 }
+    @media (prefers-color-scheme: dark) { .c { stroke: #FAF6EC } }
+  </style>
+  <ellipse class="c" cx="24" cy="24" rx="15" ry="15" fill="none" stroke-width="8"/>
+  <ellipse class="c" cx="84" cy="40" rx="15" ry="15" fill="none" stroke-width="8"/>
+  <ellipse class="c" cx="44" cy="94" rx="15" ry="15" fill="none" stroke-width="8"/>
+  <ellipse class="c" cx="114" cy="104" rx="15" ry="15" fill="none" stroke-width="8"/>
+  <path class="c" d="M 38.85 28.32 L 69 39" stroke-width="4" stroke-linecap="round"/>
+  <path class="c" d="M 54.61 83.39 L 75.99 54.04" stroke-width="4" stroke-linecap="round"/>
+  <path class="c" d="M 59 98 L 99 104" stroke-width="4" stroke-linecap="round"/>
+  <path class="c" d="M 91.71 54.04 L 108.39 90.71" stroke-width="4" stroke-linecap="round"/>
+</svg>
