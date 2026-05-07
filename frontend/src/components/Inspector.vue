@@ -75,12 +75,14 @@
             </div>
             <div v-if="node.type === 'Database'" class="editable-row">
               <label class="er-label">Type</label>
-              <input
+              <select
                 :value="node.properties?.['db_type'] ?? ''"
-                class="er-input"
-                placeholder="e.g. PostgreSQL"
-                @change="patch('db_type', ($event.target as HTMLInputElement).value)"
-              />
+                class="er-input er-select"
+                @change="patch('db_type', ($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">—</option>
+                <option v-for="opt in DB_TYPES" :key="opt" :value="opt">{{ opt }}</option>
+              </select>
             </div>
             <div v-if="node.type === 'Server'" class="editable-row">
               <label class="er-label">OS</label>
@@ -198,6 +200,22 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'connections', label: 'Connections' },
 ]
+
+const DB_TYPES = [
+  'Oracle','MySQL','Microsoft SQL Server','PostgreSQL','MongoDB','Redis','SQLite',
+  'Elasticsearch','Snowflake','Amazon DynamoDB','Apache Cassandra','MariaDB',
+  'Google BigQuery','Splunk','Firebase Realtime Database','Neo4j','Couchbase',
+  'Teradata','IBM Db2','InfluxDB','Trino','CockroachDB','YugabyteDB','PlanetScale',
+  'Neon','SingleStore','Yellowbrick','Actian Ingres','SAP HANA','Firebird','H2',
+  'HSQLDB','DuckDB','Vertica','Amazon DocumentDB','RavenDB','ArangoDB','FerretDB',
+  'Memcached','Hazelcast','Apache Ignite','Dragonfly','KeyDB','HBase','ScyllaDB',
+  'Google Bigtable','TimescaleDB','QuestDB','Prometheus','kdb+','TDengine',
+  'VictoriaMetrics','OpenSearch','Apache Solr','Typesense','Meilisearch',
+  'Manticore Search','Amazon Neptune','TigerGraph','JanusGraph','Dgraph','FalkorDB',
+  'Pinecone','Weaviate','Qdrant','Chroma','Milvus','pgvector','Apache Druid',
+  'ClickHouse','StarRocks','Databricks','Azure Synapse','Amazon Redshift','Greenplum',
+  'LevelDB','RocksDB','LMDB','Berkeley DB','Other',
+] as const
 
 const allRels = computed(() => {
   const out = props.edges.filter(e => e.fromId === props.node.id).map(e => ({ ...e, dir: 'out' as const }))

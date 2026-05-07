@@ -58,7 +58,10 @@
           <!-- DB Type (Database only) -->
           <div v-if="form.type === 'Database'" class="field">
             <label class="field-label">Type</label>
-            <input v-model="form.dbType" class="field-input" placeholder="e.g. PostgreSQL, MySQL, Redis" />
+            <select v-model="form.dbType" class="field-input">
+              <option value="">— select —</option>
+              <option v-for="opt in DB_TYPES" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
           </div>
 
           <!-- Description -->
@@ -99,6 +102,22 @@ const submitting = ref(false)
 const error = ref<string | null>(null)
 
 const TYPES = ['Service', 'Server', 'Database'] as const
+
+const DB_TYPES = [
+  'Oracle','MySQL','Microsoft SQL Server','PostgreSQL','MongoDB','Redis','SQLite',
+  'Elasticsearch','Snowflake','Amazon DynamoDB','Apache Cassandra','MariaDB',
+  'Google BigQuery','Splunk','Firebase Realtime Database','Neo4j','Couchbase',
+  'Teradata','IBM Db2','InfluxDB','Trino','CockroachDB','YugabyteDB','PlanetScale',
+  'Neon','SingleStore','Yellowbrick','Actian Ingres','SAP HANA','Firebird','H2',
+  'HSQLDB','DuckDB','Vertica','Amazon DocumentDB','RavenDB','ArangoDB','FerretDB',
+  'Memcached','Hazelcast','Apache Ignite','Dragonfly','KeyDB','HBase','ScyllaDB',
+  'Google Bigtable','TimescaleDB','QuestDB','Prometheus','kdb+','TDengine',
+  'VictoriaMetrics','OpenSearch','Apache Solr','Typesense','Meilisearch',
+  'Manticore Search','Amazon Neptune','TigerGraph','JanusGraph','Dgraph','FalkorDB',
+  'Pinecone','Weaviate','Qdrant','Chroma','Milvus','pgvector','Apache Druid',
+  'ClickHouse','StarRocks','Databricks','Azure Synapse','Amazon Redshift','Greenplum',
+  'LevelDB','RocksDB','LMDB','Berkeley DB','Other',
+] as const
 
 const form = reactive({
   type: props.node?.type ?? 'Service',

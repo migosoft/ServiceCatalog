@@ -29,9 +29,11 @@
           :edges="displayEdges"
           :highlight-ids="highlightIds"
           :layout="layout"
+          :selected-id="selectedId"
           @node-click="onNodeClick"
           @node-right-click="onNodeRightClick"
           @edge-right-click="onEdgeRightClick"
+          @deselect="selectedId = null"
         />
         <GridView
           v-if="view === 'grid'"
@@ -176,7 +178,7 @@ async function onNodeClick(id: string) {
 
 async function onSidebarSelect(id: string) {
   selectedId.value = id
-  if (view.value === 'graph') graphCanvas.value?.focusNode(id)
+  graphCanvas.value?.focusNode(id)
 }
 
 // Patch node fields inline from Inspector

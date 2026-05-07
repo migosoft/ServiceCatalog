@@ -185,12 +185,14 @@ const props = defineProps<{
   edges: EdgeDto[]
   highlightIds?: string[]
   layout?: string
+  selectedId?: string | null
 }>()
 
 const emit = defineEmits<{
   nodeClick: [id: string]
   nodeRightClick: [id: string, x: number, y: number]
   edgeRightClick: [id: string, x: number, y: number]
+  deselect: []
 }>()
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -224,6 +226,9 @@ const positions = reactive<Record<string, { x: number; y: number }>>({})
 const hoverId    = ref<string | null>(null)
 const draggingId = ref<string | null>(null)
 const clickedId  = ref<string | null>(null)
+
+// Keep clickedId in sync with the selectedId prop (driven by sidebar / grid / inspector)
+watch(() => props.selectedId, id => { clickedId.value = id ?? null })
 
 // 1-hop neighbourhood of clickedId (clicked node + directly connected nodes)
 const clickNeighbours = computed<Set<string> | null>(() => {
@@ -522,6 +527,7 @@ function onWheel(e: WheelEvent) {
 function onCanvasDown(e: MouseEvent) {
   if ((e.target as Element).closest('[data-node-id]')) return
   clickedId.value = null
+  emit('deselect')
   const sx = e.clientX, sy = e.clientY, vx0 = vp.x, vy0 = vp.y
   const move = (ev: MouseEvent) => { vp.x = vx0 + (ev.clientX - sx); vp.y = vy0 + (ev.clientY - sy) }
   const up   = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
