@@ -31,8 +31,12 @@
           @click="toggleType(t)"
         >
           <div class="chip-header">
-            <span class="type-dot" :style="{ background: `var(--c-${t.toLowerCase()})` }" />
-            <span class="chip-abbr">{{ t.slice(0, 3) }}</span>
+            <span class="chip-icon-badge" :class="t.toLowerCase()">
+              <SvcIcon v-if="t === 'Service'" />
+              <SrvIcon v-else-if="t === 'Server'" />
+              <DbIcon v-else />
+            </span>
+            <span class="chip-abbr">{{ t }}</span>
           </div>
           <div class="chip-count">{{ counts[t] ?? 0 }}</div>
         </button>
@@ -68,7 +72,11 @@
             :class="['node-item', { selected: selectedId === n.id }]"
             @click="$emit('select', n.id)"
           >
-            <span class="node-badge" :class="n.type.toLowerCase()">{{ n.type[0] }}</span>
+            <span class="node-badge" :class="n.type.toLowerCase()">
+              <SvcIcon v-if="n.type === 'Service'" />
+              <SrvIcon v-else-if="n.type === 'Server'" />
+              <DbIcon v-else />
+            </span>
             <span class="node-name">{{ n.name }}</span>
           </div>
         </div>
@@ -84,8 +92,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue'
+import { computed, ref, onUnmounted, h } from 'vue'
 import type { NodeDto } from '@/api/catalog'
+
+const SvcIcon = () => h('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+  [h('circle', { cx: 12, cy: 12, r: 3 }), h('path', { d: 'M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2' })])
+const SrvIcon = () => h('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+  [h('rect', { x: 3, y: 4, width: 18, height: 7, rx: '1.5' }), h('rect', { x: 3, y: 13, width: 18, height: 7, rx: '1.5' }), h('circle', { cx: 7, cy: '7.5', r: '.7', fill: 'currentColor' }), h('circle', { cx: 7, cy: '16.5', r: '.7', fill: 'currentColor' })])
+const DbIcon = () => h('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+  [h('ellipse', { cx: 12, cy: 5, rx: 8, ry: '2.5' }), h('path', { d: 'M4 5v7c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5V5' }), h('path', { d: 'M4 12v7c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-7' })])
 
 const props = defineProps<{
   nodes: NodeDto[]
@@ -194,7 +209,14 @@ onUnmounted(() => {
 .type-chip.active { background: var(--c-panel-2); opacity: 1; }
 .chip-header { display: flex; align-items: center; gap: 5px; }
 .type-dot { width: 7px; height: 7px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
-.chip-abbr { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--c-text-2); }
+.chip-icon-badge {
+  width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.chip-icon-badge.service  { background: var(--c-service); }
+.chip-icon-badge.server   { background: var(--c-server); }
+.chip-icon-badge.database { background: var(--c-database); color: var(--c-text); }
+.chip-abbr { font-size: 10.5px; font-weight: 600; color: var(--c-text-2); }
 .chip-count { font-size: 18px; font-weight: 600; font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-text); }
 .add-section { padding: 10px 14px; border-bottom: 1px solid var(--c-divider); display: flex; gap: 6px; }
 .btn-primary {
