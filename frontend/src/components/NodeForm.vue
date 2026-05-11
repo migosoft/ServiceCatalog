@@ -64,6 +64,18 @@
             </select>
           </div>
 
+          <!-- Code Repository (Service only) -->
+          <div v-if="form.type === 'Service'" class="field">
+            <label class="field-label">Code Repository</label>
+            <input v-model="form.codeRepository" class="field-input" placeholder="https://github.com/org/repo" />
+          </div>
+
+          <!-- Documentation URL (Service only) -->
+          <div v-if="form.type === 'Service'" class="field">
+            <label class="field-label">Documentation</label>
+            <input v-model="form.documentationUrl" class="field-input" placeholder="https://docs.example.com" />
+          </div>
+
           <!-- Description -->
           <div class="field">
             <label class="field-label">Description</label>
@@ -123,10 +135,12 @@ const form = reactive({
   type: props.node?.type ?? 'Service',
   name: props.node?.name ?? '',
   description: props.node?.description ?? '',
-  os:      props.node?.properties?.['os']      ?? 'Linux',
-  owner:   props.node?.properties?.['owner']   ?? '',
-  address: props.node?.properties?.['address'] ?? '',
-  dbType:  props.node?.properties?.['db_type'] ?? '',
+  os:              props.node?.properties?.['os']        ?? 'Linux',
+  owner:           props.node?.properties?.['owner']     ?? '',
+  address:         props.node?.properties?.['address']   ?? '',
+  dbType:          props.node?.properties?.['db_type']   ?? '',
+  codeRepository:  props.node?.properties?.['code_repo'] ?? '',
+  documentationUrl: props.node?.properties?.['docs_url'] ?? '',
 })
 
 async function submit() {
@@ -138,10 +152,12 @@ async function submit() {
     const owner   = form.owner.trim()   || undefined
     const address = form.address.trim() || undefined
     const dbType  = form.type === 'Database' ? form.dbType.trim() || undefined : undefined
+    const codeRepository  = form.type === 'Service' ? form.codeRepository.trim()  || undefined : undefined
+    const documentationUrl = form.type === 'Service' ? form.documentationUrl.trim() || undefined : undefined
     if (props.node) {
-      saved = await store.updateNode(props.node.id, { name: form.name, description: form.description, operatingSystem: os, owner, address, dbType })
+      saved = await store.updateNode(props.node.id, { name: form.name, description: form.description, operatingSystem: os, owner, address, dbType, codeRepository, documentationUrl })
     } else {
-      saved = await store.createNode({ type: form.type, name: form.name, description: form.description, operatingSystem: os, owner, address, dbType })
+      saved = await store.createNode({ type: form.type, name: form.name, description: form.description, operatingSystem: os, owner, address, dbType, codeRepository, documentationUrl })
     }
     emit('saved', saved)
     emit('close')

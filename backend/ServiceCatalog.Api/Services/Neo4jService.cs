@@ -73,6 +73,10 @@ public class Neo4jService : IDisposable
             props["address"] = req.Address;
         if (type == "Database" && !string.IsNullOrWhiteSpace(req.DbType))
             props["db_type"] = req.DbType;
+        if (type == "Service" && !string.IsNullOrWhiteSpace(req.CodeRepository))
+            props["code_repo"] = req.CodeRepository;
+        if (type == "Service" && !string.IsNullOrWhiteSpace(req.DocumentationUrl))
+            props["docs_url"] = req.DocumentationUrl;
         await using var session = _driver.AsyncSession();
         var result = await session.RunAsync(
             $"CREATE (n:{type} $props) " +
@@ -87,16 +91,20 @@ public class Neo4jService : IDisposable
         var os    = (!string.IsNullOrWhiteSpace(req.OperatingSystem)) ? SanitizeOs(req.OperatingSystem) : "";
         var owner = req.Owner?.Trim() ?? "";
         await using var session = _driver.AsyncSession();
+        var codeRepo = req.CodeRepository?.Trim() ?? "";
+        var docsUrl  = req.DocumentationUrl?.Trim() ?? "";
         var result = await session.RunAsync(
             "MATCH (n) WHERE elementId(n) = $id " +
             "SET n.name = $name, n.description = $description " +
-            "SET n.owner   = CASE WHEN $owner   <> '' THEN $owner   ELSE null END " +
-            "SET n.address = CASE WHEN $address <> '' THEN $address ELSE null END " +
-            "SET n.db_type = CASE WHEN n:Database AND $dbType <> '' THEN $dbType ELSE null END " +
+            "SET n.owner    = CASE WHEN $owner    <> '' THEN $owner    ELSE null END " +
+            "SET n.address  = CASE WHEN $address  <> '' THEN $address  ELSE null END " +
+            "SET n.db_type  = CASE WHEN n:Database AND $dbType   <> '' THEN $dbType   ELSE null END " +
+            "SET n.code_repo = CASE WHEN n:Service  AND $codeRepo <> '' THEN $codeRepo ELSE null END " +
+            "SET n.docs_url  = CASE WHEN n:Service  AND $docsUrl  <> '' THEN $docsUrl  ELSE null END " +
             "FOREACH (_ IN CASE WHEN n:Server AND $os <> '' THEN [1] ELSE [] END | SET n.os = $os) " +
             "FOREACH (_ IN CASE WHEN n:Server AND $os = '' THEN [1] ELSE [] END | REMOVE n.os) " +
             "RETURN elementId(n) AS id, labels(n)[0] AS type, n.name AS name, n.description AS description, properties(n) AS props",
-            new { id, name = req.Name, description = req.Description ?? "", os, owner, address = req.Address?.Trim() ?? "", dbType = req.DbType?.Trim() ?? "" });
+            new { id, name = req.Name, description = req.Description ?? "", os, owner, address = req.Address?.Trim() ?? "", dbType = req.DbType?.Trim() ?? "", codeRepo, docsUrl });
         var records = await result.ToListAsync(MapNode);
         return records.FirstOrDefault();
     }

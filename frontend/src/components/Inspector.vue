@@ -99,6 +99,48 @@
                 <option value="Linux">Linux</option>
               </select>
             </div>
+            <div v-if="node.type === 'Service'" class="editable-row">
+              <label class="er-label">Code Repo</label>
+              <div class="er-url-wrap">
+                <input
+                  :value="node.properties?.['code_repo'] ?? ''"
+                  class="er-input"
+                  placeholder="https://github.com/…"
+                  @change="patch('code_repo', ($event.target as HTMLInputElement).value)"
+                />
+                <a
+                  v-if="node.properties?.['code_repo']"
+                  :href="node.properties['code_repo']"
+                  target="_blank" rel="noopener noreferrer"
+                  class="er-link-btn" title="Open repository"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+            <div v-if="node.type === 'Service'" class="editable-row">
+              <label class="er-label">Docs</label>
+              <div class="er-url-wrap">
+                <input
+                  :value="node.properties?.['docs_url'] ?? ''"
+                  class="er-input"
+                  placeholder="https://docs.example.com"
+                  @change="patch('docs_url', ($event.target as HTMLInputElement).value)"
+                />
+                <a
+                  v-if="node.properties?.['docs_url']"
+                  :href="node.properties['docs_url']"
+                  target="_blank" rel="noopener noreferrer"
+                  class="er-link-btn" title="Open documentation"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
             <div class="editable-row">
               <label class="er-label">Description</label>
               <textarea
@@ -436,6 +478,15 @@ function patch(key: string, value: string) {
 .er-input:focus { background: var(--c-panel); border-color: var(--c-accent); }
 .er-textarea { resize: vertical; min-height: 44px; line-height: 1.4; }
 .er-select { cursor: pointer; }
+.er-url-wrap { display: flex; align-items: center; gap: 4px; width: 100%; }
+.er-url-wrap .er-input { flex: 1; min-width: 0; }
+.er-link-btn {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 5px;
+  color: var(--c-muted); text-decoration: none;
+  transition: color .12s, background .12s;
+}
+.er-link-btn:hover { color: var(--c-accent); background: var(--c-panel-2); }
 .conn-list { display: flex; flex-direction: column; gap: 4px; }
 .conn-row {
   display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;

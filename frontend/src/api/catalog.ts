@@ -28,9 +28,9 @@ export const catalogApi = {
   getNeighbors: (id: string) => api.get<GraphDto>(`/api/nodes/${id}/neighbors`).then(r => r.data),
 
   getNodes: () => api.get<NodeDto[]>('/api/nodes').then(r => r.data),
-  createNode: (data: { type: string; name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string }) =>
+  createNode: (data: { type: string; name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string; codeRepository?: string; documentationUrl?: string }) =>
     api.post<NodeDto>('/api/nodes', data).then(r => r.data),
-  updateNode: (id: string, data: { name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string }) =>
+  updateNode: (id: string, data: { name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string; codeRepository?: string; documentationUrl?: string }) =>
     api.put<NodeDto>(`/api/nodes/${id}`, data).then(r => r.data),
   deleteNode: (id: string) => api.delete(`/api/nodes/${id}`),
 
