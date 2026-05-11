@@ -10,7 +10,7 @@
           <path d="M38.85 28.32 L69 39 M54.61 83.39 L75.99 54.04 M59 98 L99 104 M91.71 54.04 L108.39 90.71"
                 stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
         </svg>
-        <span class="logo-dot" />
+        <span class="logo-dot" :class="logoDotClass" />
       </div>
       <div class="logo-text">
         <div class="logo-title">Service Catalog</div>
@@ -57,6 +57,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useHealthStore } from '@/stores/health'
+
 defineProps<{
   view: string
   nodeCount: number
@@ -72,6 +75,12 @@ const VIEWS = [
   { id: 'graph', label: 'Graph' },
   { id: 'grid',  label: 'Grid' },
 ]
+
+const health = useHealthStore()
+const logoDotClass = computed(() => {
+  if (!health.hasMonitored) return ''
+  return health.anyDown ? 'dot-down' : 'dot-up'
+})
 </script>
 
 <style scoped>
@@ -89,7 +98,11 @@ const VIEWS = [
 .logo-dot {
   position: absolute; right: -2px; top: -2px; width: 8px; height: 8px;
   border-radius: 999px; background: var(--c-accent); border: 1.5px solid var(--c-panel);
+  transition: background .3s;
 }
+.logo-dot.dot-up   { background: var(--c-ok); }
+.logo-dot.dot-down { background: var(--c-err); animation: ldot-blink 1.2s ease-in-out infinite; }
+@keyframes ldot-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 .logo-text { display: flex; flex-direction: column; line-height: 1.15; }
 .logo-title { font-size: 13.5px; font-weight: 600; color: var(--c-text); letter-spacing: -0.005em; }
 .logo-sub { font-size: 10.5px; color: var(--c-muted); font-family: var(--font-mono); letter-spacing: 0.02em; }

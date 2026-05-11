@@ -234,11 +234,63 @@ public class Neo4jService : IDisposable
         return new GraphDto(allNodes, edges);
     }
 
+    // ── Health config persistence ─────────────────────────────────────────────
+    public async Task<HealthCheckConfig?> GetHealthConfigAsync(string nodeId)
+    {
+        await using var session = _driver.AsyncSession();
+        var result = await session.RunAsync(
+            "MATCH (n) WHERE elementId(n) = $id AND n.healthCheckTarget IS NOT NULL " +
+            "RETURN elementId(n) AS id, coalesce(n.healthCheckType, 'http') AS checkType, n.healthCheckTarget AS target, " +
+            "coalesce(n.healthIntervalSeconds, 30) AS interval, coalesce(n.healthRetryCount, 3) AS retry",
+            new { id = nodeId });
+        var records = await result.ToListAsync(r => new HealthCheckConfig(
+            r["id"].As<string>(),
+            r["checkType"].As<string>(),
+            r["target"].As<string>(),
+            (int)r["interval"].As<long>(),
+            (int)r["retry"].As<long>()));
+        return records.FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<HealthCheckConfig>> GetAllHealthConfigsAsync()
+    {
+        await using var session = _driver.AsyncSession();
+        var result = await session.RunAsync(
+            "MATCH (n) WHERE n.healthCheckTarget IS NOT NULL " +
+            "RETURN elementId(n) AS id, coalesce(n.healthCheckType, 'http') AS checkType, n.healthCheckTarget AS target, " +
+            "coalesce(n.healthIntervalSeconds, 30) AS interval, coalesce(n.healthRetryCount, 3) AS retry");
+        return await result.ToListAsync(r => new HealthCheckConfig(
+            r["id"].As<string>(),
+            r["checkType"].As<string>(),
+            r["target"].As<string>(),
+            (int)r["interval"].As<long>(),
+            (int)r["retry"].As<long>()));
+    }
+
+    public async Task SetHealthConfigAsync(string nodeId, SetHealthConfigRequest req)
+    {
+        await using var session = _driver.AsyncSession();
+        await session.RunAsync(
+            "MATCH (n) WHERE elementId(n) = $id " +
+            "SET n.healthCheckType = $checkType, n.healthCheckTarget = $target, " +
+            "n.healthIntervalSeconds = $interval, n.healthRetryCount = $retry",
+            new { id = nodeId, checkType = req.CheckType, target = req.CheckTarget, interval = req.IntervalSeconds, retry = req.RetryCount });
+    }
+
+    public async Task DeleteHealthConfigAsync(string nodeId)
+    {
+        await using var session = _driver.AsyncSession();
+        await session.RunAsync(
+            "MATCH (n) WHERE elementId(n) = $id " +
+            "REMOVE n.healthCheckType, n.healthCheckTarget, n.healthIntervalSeconds, n.healthRetryCount",
+            new { id = nodeId });
+    }
+
     private static NodeDto MapNode(IRecord r)
     {
         var props = r["props"].As<IDictionary<string, object>>();
         var extra = props
-            .Where(p => p.Key != "name" && p.Key != "description")
+            .Where(p => p.Key != "name" && p.Key != "description" && !p.Key.StartsWith("health"))
             .ToDictionary(p => p.Key, p => p.Value?.ToString() ?? "");
         return new NodeDto(
             r["id"].As<string>(),

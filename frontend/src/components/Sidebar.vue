@@ -78,6 +78,9 @@
               <DbIcon v-else />
             </span>
             <span class="node-name">{{ n.name }}</span>
+            <span v-if="healthStore.statusOf(n.id)"
+                  class="node-health"
+                  :class="healthStore.statusOf(n.id)!.isAvailable ? 'up' : 'down'" />
           </div>
         </div>
       </template>
@@ -94,6 +97,7 @@
 <script setup lang="ts">
 import { computed, ref, onUnmounted, h } from 'vue'
 import type { NodeDto } from '@/api/catalog'
+import { useHealthStore } from '@/stores/health'
 
 const SvcIcon = () => h('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
   [h('circle', { cx: 12, cy: 12, r: 3 }), h('path', { d: 'M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2' })])
@@ -150,6 +154,8 @@ function toggleType(t: string) {
 }
 
 // Resizable width
+const healthStore = useHealthStore()
+
 const sidebarWidth = ref(280)
 const resizing = ref(false)
 let _startX = 0, _startW = 0
@@ -263,6 +269,10 @@ onUnmounted(() => {
 .node-badge.server  { background: var(--c-server); }
 .node-badge.database { background: var(--c-database); color: var(--c-text); }
 .node-name { font-size: 13px; color: var(--c-text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node-health { width: 5px; height: 5px; border-radius: 999px; flex-shrink: 0; }
+.node-health.up   { background: var(--c-ok); }
+.node-health.down { background: var(--c-err); animation: nh-blink 1.2s ease-in-out infinite; }
+@keyframes nh-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 .empty-state { padding: 24px; text-align: center; color: var(--c-muted); font-size: 12px; }
 .error-msg { padding: 8px 14px; font-size: 12px; color: var(--c-err); }
 

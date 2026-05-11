@@ -29,6 +29,9 @@
       >
         {{ t.label }}
         <span v-if="t.id === 'connections'" class="tab-count">{{ allRels.length }}</span>
+        <span v-if="t.id === 'monitor' && nodeStatus"
+              class="tab-health-dot"
+              :class="nodeStatus.isAvailable ? 'up' : 'down'" />
       </button>
     </div>
 
@@ -111,6 +114,66 @@
 
       </template>
 
+      <!-- Monitor tab -->
+      <template v-if="tab === 'monitor'">
+        <div v-if="nodeStatus" class="section">
+          <div class="section-label">Current status</div>
+          <div class="health-status-row" :class="nodeStatus.isAvailable ? 'up' : 'down'">
+            <span class="health-dot" :class="nodeStatus.isAvailable ? 'up' : 'down'" />
+            <span class="health-label">{{ nodeStatus.isAvailable ? 'Available' : 'Down' }}</span>
+            <span class="health-time">{{ formatAge(nodeStatus.checkedAt) }}</span>
+          </div>
+          <div v-if="nodeStatus.error" class="health-err-text">{{ nodeStatus.error }}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-label-row">
+            <span class="section-label">{{ nodeConfig ? 'Configuration' : 'Enable monitoring' }}</span>
+            <span class="check-type-badge" :class="node.type === 'Server' ? 'ping' : 'http'">
+              {{ node.type === 'Server' ? 'ICMP Ping' : 'HTTP GET' }}
+            </span>
+          </div>
+          <div class="editable-rows">
+            <div class="editable-row">
+              <label class="er-label">{{ node.type === 'Server' ? 'Address' : 'URL' }}</label>
+              <input v-model="monitorForm.checkTarget" class="er-input"
+                     :placeholder="node.type === 'Server' ? 'hostname or IP' : 'https://…/health'" />
+            </div>
+            <div class="editable-row">
+              <label class="er-label">Interval</label>
+              <select v-model.number="monitorForm.intervalSeconds" class="er-input er-select">
+                <option :value="15">15 s</option>
+                <option :value="30">30 s</option>
+                <option :value="60">1 min</option>
+                <option :value="300">5 min</option>
+                <option :value="900">15 min</option>
+              </select>
+            </div>
+            <div class="editable-row">
+              <label class="er-label">Retries</label>
+              <select v-model.number="monitorForm.retryCount" class="er-input er-select">
+                <option :value="0">0</option>
+                <option :value="1">1</option>
+                <option :value="2">2</option>
+                <option :value="3">3</option>
+                <option :value="5">5</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="monitorError" class="error-msg">{{ monitorError }}</p>
+
+        <div class="monitor-btns">
+          <button class="btn-save" :disabled="!monitorForm.checkTarget.trim() || monitorSubmitting" @click="saveMonitor">
+            {{ nodeConfig ? 'Update' : 'Enable' }}
+          </button>
+          <button v-if="nodeConfig" class="btn-remove" :disabled="monitorSubmitting" @click="removeMonitor">
+            Remove
+          </button>
+        </div>
+      </template>
+
       <!-- Connections tab -->
       <template v-if="tab === 'connections'">
         <template v-for="rt in ['REQUIRES', 'RUNS_ON']" :key="rt">
@@ -167,9 +230,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import { h } from 'vue'
 import type { NodeDto, EdgeDto } from '@/api/catalog'
+import { useHealthStore } from '@/stores/health'
 
 const props = defineProps<{
   node: NodeDto
@@ -196,10 +260,75 @@ const SrvIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fi
 const DbIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
   [h('ellipse', { cx: 12, cy: 5, rx: 8, ry: '2.5' }), h('path', { d: 'M4 5v7c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5V5' }), h('path', { d: 'M4 12v7c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-7' })])
 
+const healthStore = useHealthStore()
+
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'connections', label: 'Connections' },
+  { id: 'monitor', label: 'Monitor' },
 ]
+
+const nodeStatus = computed(() => healthStore.statusOf(props.node.id))
+const nodeConfig  = computed(() => healthStore.configOf(props.node.id))
+
+const monitorForm = reactive({ checkTarget: '', intervalSeconds: 30, retryCount: 3 })
+const monitorSubmitting = ref(false)
+const monitorError = ref<string | null>(null)
+
+watch(() => props.node.id, () => {
+  monitorError.value = null
+  const cfg = nodeConfig.value
+  monitorForm.checkTarget    = cfg?.checkTarget    ?? ''
+  monitorForm.intervalSeconds = cfg?.intervalSeconds ?? 30
+  monitorForm.retryCount     = cfg?.retryCount     ?? 3
+}, { immediate: true })
+
+watch(nodeConfig, (cfg) => {
+  if (cfg) {
+    monitorForm.checkTarget    = cfg.checkTarget
+    monitorForm.intervalSeconds = cfg.intervalSeconds
+    monitorForm.retryCount     = cfg.retryCount
+  }
+})
+
+function formatAge(iso: string): string {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 60)   return `${s}s ago`
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  return `${Math.floor(s / 3600)}h ago`
+}
+
+async function saveMonitor() {
+  monitorSubmitting.value = true
+  monitorError.value = null
+  try {
+    await healthStore.setConfig(props.node.id, {
+      checkType:       props.node.type === 'Server' ? 'ping' : 'http',
+      checkTarget:     monitorForm.checkTarget.trim(),
+      intervalSeconds: monitorForm.intervalSeconds,
+      retryCount:      monitorForm.retryCount,
+    })
+  } catch (e: any) {
+    monitorError.value = e?.response?.data ?? 'Failed to save'
+  } finally {
+    monitorSubmitting.value = false
+  }
+}
+
+async function removeMonitor() {
+  monitorSubmitting.value = true
+  monitorError.value = null
+  try {
+    await healthStore.deleteConfig(props.node.id)
+    monitorForm.checkTarget    = ''
+    monitorForm.intervalSeconds = 30
+    monitorForm.retryCount     = 3
+  } catch (e: any) {
+    monitorError.value = e?.response?.data ?? 'Failed to remove'
+  } finally {
+    monitorSubmitting.value = false
+  }
+}
 
 const DB_TYPES = [
   'Oracle','MySQL','Microsoft SQL Server','PostgreSQL','MongoDB','Redis','SQLite',
@@ -338,4 +467,42 @@ function patch(key: string, value: string) {
 .act-btn:hover { background: var(--c-panel-2); }
 .act-btn.danger { flex: none; padding: 7px 12px; border-color: var(--c-divider); color: var(--c-err); }
 .act-btn.danger:hover { background: color-mix(in oklab, var(--c-err) 10%, transparent); border-color: var(--c-err); }
+.tab-health-dot { width: 5px; height: 5px; border-radius: 999px; display: inline-block; flex-shrink: 0; }
+.tab-health-dot.up   { background: var(--c-ok); }
+.tab-health-dot.down { background: var(--c-err); }
+.section-label-row { display: flex; align-items: center; justify-content: space-between; }
+.check-type-badge {
+  font-size: 9.5px; font-weight: 600; font-family: var(--font-mono);
+  padding: 2px 6px; border-radius: 4px; letter-spacing: .04em; text-transform: uppercase;
+}
+.check-type-badge.http { background: color-mix(in oklab, var(--c-accent) 12%, transparent); color: var(--c-accent); }
+.check-type-badge.ping { background: color-mix(in oklab, var(--c-server) 12%, transparent); color: var(--c-text-2); }
+.health-status-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border-radius: 7px; background: var(--c-panel-2); border: 1px solid var(--c-divider);
+}
+.health-status-row.up   { border-color: color-mix(in oklab, var(--c-ok)  35%, var(--c-divider)); }
+.health-status-row.down { border-color: color-mix(in oklab, var(--c-err) 35%, var(--c-divider)); }
+.health-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
+.health-dot.up   { background: var(--c-ok); }
+.health-dot.down { background: var(--c-err); animation: hdot-blink 1.2s ease-in-out infinite; }
+@keyframes hdot-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+.health-label { font-size: 12.5px; font-weight: 600; color: var(--c-text); flex: 1; }
+.health-time  { font-size: 11px; color: var(--c-muted); font-family: var(--font-mono); }
+.health-err-text { font-size: 11px; color: var(--c-err); margin-top: 6px; font-family: var(--font-mono); }
+.monitor-btns { display: flex; gap: 8px; }
+.btn-save {
+  flex: 1; padding: 8px 14px; border: 0; border-radius: 7px; cursor: pointer;
+  background: var(--c-accent); color: #fff; font-size: 12px; font-weight: 500;
+  transition: background .1s;
+}
+.btn-save:hover:not(:disabled) { background: color-mix(in oklab, var(--c-accent) 85%, black); }
+.btn-save:disabled { opacity: .45; cursor: not-allowed; }
+.btn-remove {
+  padding: 8px 14px; border: 1px solid var(--c-err); border-radius: 7px; cursor: pointer;
+  background: transparent; color: var(--c-err); font-size: 12px; font-weight: 500;
+  transition: background .1s;
+}
+.btn-remove:hover:not(:disabled) { background: color-mix(in oklab, var(--c-err) 10%, transparent); }
+.btn-remove:disabled { opacity: .45; cursor: not-allowed; }
 </style>

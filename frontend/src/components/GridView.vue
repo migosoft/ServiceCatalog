@@ -23,7 +23,9 @@
               </span>
               <span class="card-type">{{ n.type }}</span>
               <div class="spacer" />
-              <span class="status-dot ok" />
+              <span v-if="healthStore.statusOf(n.id)"
+                    class="status-dot"
+                    :class="healthStore.statusOf(n.id)!.isAvailable ? 'ok' : 'down'" />
             </div>
             <div class="card-name">{{ n.name }}</div>
             <div v-if="n.description" class="card-desc">{{ n.description }}</div>
@@ -55,6 +57,7 @@
 <script setup lang="ts">
 import { computed, h } from 'vue'
 import type { NodeDto, EdgeDto } from '@/api/catalog'
+import { useHealthStore } from '@/stores/health'
 
 const props = defineProps<{
   nodes: NodeDto[]
@@ -73,6 +76,8 @@ const SrvIcon = () => h('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fi
   [h('rect', { x: 3, y: 4, width: 18, height: 7, rx: '1.5' }), h('rect', { x: 3, y: 13, width: 18, height: 7, rx: '1.5' }), h('circle', { cx: 7, cy: '7.5', r: '.7', fill: 'currentColor' }), h('circle', { cx: 7, cy: '16.5', r: '.7', fill: 'currentColor' })])
 const DbIcon = () => h('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
   [h('ellipse', { cx: 12, cy: 5, rx: 8, ry: '2.5' }), h('path', { d: 'M4 5v7c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5V5' }), h('path', { d: 'M4 12v7c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-7' })])
+
+const healthStore = useHealthStore()
 
 const grouped = computed(() => {
   const g: Record<string, NodeDto[]> = { Server: [], Database: [], Service: [] }
@@ -115,7 +120,9 @@ const totalNodes = computed(() => props.nodes.length)
 .card-type { font-size: 10.5px; font-weight: 600; color: var(--c-muted); text-transform: uppercase; letter-spacing: .08em; }
 .spacer { flex: 1; }
 .status-dot { width: 6px; height: 6px; border-radius: 999px; }
-.status-dot.ok { background: var(--c-ok); }
+.status-dot.ok   { background: var(--c-ok); }
+.status-dot.down { background: var(--c-err); animation: sdot-blink 1.2s ease-in-out infinite; }
+@keyframes sdot-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 .card-name { font-size: 14px; font-weight: 600; color: var(--c-text); font-family: var(--font-mono); margin-bottom: 4px; }
 .card-desc {
   font-size: 12px; color: var(--c-text-2); line-height: 1.5; margin-bottom: 10px;

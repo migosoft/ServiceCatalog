@@ -123,6 +123,17 @@
                 style="pointer-events:none;font-family:var(--font-sans)">
             {{ n.name }}
           </text>
+
+          <!-- Health status dot -->
+          <g v-if="healthStore.statusOf(n.id)" :transform="`translate(${nodeW(n) - 9}, 9)`" style="pointer-events:none">
+            <circle cx="0" cy="0" r="4.5" fill="var(--c-panel)" />
+            <circle cx="0" cy="0" r="3.5"
+                    :fill="healthStore.statusOf(n.id)!.isAvailable ? 'var(--c-ok)' : 'var(--c-err)'"
+                    stroke="var(--c-panel)" stroke-width="1.2">
+              <animate v-if="!healthStore.statusOf(n.id)!.isAvailable"
+                       attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite" />
+            </circle>
+          </g>
         </g>
       </g>
     </svg>
@@ -179,6 +190,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { NodeDto, EdgeDto } from '@/api/catalog'
 import { palette } from '@/theme/palette'
+import { useHealthStore } from '@/stores/health'
 
 const props = defineProps<{
   nodes: NodeDto[]
@@ -194,6 +206,8 @@ const emit = defineEmits<{
   edgeRightClick: [id: string, x: number, y: number]
   deselect: []
 }>()
+
+const healthStore = useHealthStore()
 
 // ── Constants ───────────────────────────────────────────────────────────────
 const NODE_H = 44

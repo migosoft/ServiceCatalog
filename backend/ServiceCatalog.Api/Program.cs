@@ -4,6 +4,8 @@ using ServiceCatalog.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<Neo4jService>();
+builder.Services.AddSingleton<HealthCheckService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<HealthCheckService>());
 builder.Services.AddOpenApi();
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? ["http://localhost:5173"];
@@ -24,5 +26,6 @@ if (app.Environment.IsDevelopment())
 app.MapNodeEndpoints();
 app.MapEdgeEndpoints();
 app.MapGraphEndpoints();
+app.MapHealthEndpoints();
 
 app.Run();

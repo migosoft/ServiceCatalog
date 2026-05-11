@@ -100,6 +100,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
 import { useCatalogStore } from '@/stores/catalog'
+import { useHealthStore } from '@/stores/health'
 import type { NodeDto, EdgeDto, GraphDto } from '@/api/catalog'
 import TopBar from '@/components/TopBar.vue'
 import Sidebar from '@/components/Sidebar.vue'
@@ -110,6 +111,7 @@ import NodeForm from '@/components/NodeForm.vue'
 import EdgeForm from '@/components/EdgeForm.vue'
 
 const store = useCatalogStore()
+const healthStore = useHealthStore()
 const graphCanvas = ref<{ focusNode: (id: string) => void } | null>(null)
 
 // View state
@@ -259,9 +261,13 @@ function onGlobalClick() {
 
 onMounted(() => {
   store.loadGraph()
+  healthStore.connect()
   document.addEventListener('click', onGlobalClick)
 })
-onUnmounted(() => document.removeEventListener('click', onGlobalClick))
+onUnmounted(() => {
+  document.removeEventListener('click', onGlobalClick)
+  healthStore.disconnect()
+})
 </script>
 
 <style scoped>
