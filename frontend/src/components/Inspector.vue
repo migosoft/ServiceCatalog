@@ -29,9 +29,9 @@
       >
         {{ t.label }}
         <span v-if="t.id === 'connections'" class="tab-count">{{ allRels.length }}</span>
-        <span v-if="t.id === 'monitor' && nodeStatus"
+        <span v-if="t.id === 'monitor' && nodeDispStatus !== 'none'"
               class="tab-health-dot"
-              :class="nodeStatus.isAvailable ? 'up' : 'down'" />
+              :class="nodeDispStatus" />
       </button>
     </div>
 
@@ -118,9 +118,13 @@
       <template v-if="tab === 'monitor'">
         <div v-if="nodeStatus" class="section">
           <div class="section-label">Current status</div>
-          <div class="health-status-row" :class="nodeStatus.isAvailable ? 'up' : 'down'">
-            <span class="health-dot" :class="nodeStatus.isAvailable ? 'up' : 'down'" />
-            <span class="health-label">{{ nodeStatus.isAvailable ? 'Available' : 'Down' }}</span>
+          <div class="health-status-row" :class="nodeDispStatus">
+            <span class="health-dot" :class="nodeDispStatus" />
+            <span class="health-label">
+              {{ nodeDispStatus === 'available' ? 'Available'
+               : nodeDispStatus === 'compromised' ? 'Compromised'
+               : 'Down' }}
+            </span>
             <span class="health-time">{{ formatAge(nodeStatus.checkedAt) }}</span>
           </div>
           <div v-if="nodeStatus.error" class="health-err-text">{{ nodeStatus.error }}</div>
@@ -268,8 +272,9 @@ const TABS = [
   { id: 'monitor', label: 'Monitor' },
 ]
 
-const nodeStatus = computed(() => healthStore.statusOf(props.node.id))
-const nodeConfig  = computed(() => healthStore.configOf(props.node.id))
+const nodeStatus      = computed(() => healthStore.statusOf(props.node.id))
+const nodeConfig      = computed(() => healthStore.configOf(props.node.id))
+const nodeDispStatus  = computed(() => healthStore.displayStatus(props.node.id))
 
 const monitorForm = reactive({ checkTarget: '', intervalSeconds: 30, retryCount: 3 })
 const monitorSubmitting = ref(false)
@@ -468,8 +473,9 @@ function patch(key: string, value: string) {
 .act-btn.danger { flex: none; padding: 7px 12px; border-color: var(--c-divider); color: var(--c-err); }
 .act-btn.danger:hover { background: color-mix(in oklab, var(--c-err) 10%, transparent); border-color: var(--c-err); }
 .tab-health-dot { width: 5px; height: 5px; border-radius: 999px; display: inline-block; flex-shrink: 0; }
-.tab-health-dot.up   { background: var(--c-ok); }
-.tab-health-dot.down { background: var(--c-err); }
+.tab-health-dot.available    { background: var(--c-ok); }
+.tab-health-dot.compromised  { background: var(--c-warn); }
+.tab-health-dot.unavailable  { background: var(--c-err); }
 .section-label-row { display: flex; align-items: center; justify-content: space-between; }
 .check-type-badge {
   font-size: 9.5px; font-weight: 600; font-family: var(--font-mono);
@@ -481,12 +487,13 @@ function patch(key: string, value: string) {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px;
   border-radius: 7px; background: var(--c-panel-2); border: 1px solid var(--c-divider);
 }
-.health-status-row.up   { border-color: color-mix(in oklab, var(--c-ok)  35%, var(--c-divider)); }
-.health-status-row.down { border-color: color-mix(in oklab, var(--c-err) 35%, var(--c-divider)); }
-.health-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
-.health-dot.up   { background: var(--c-ok); }
-.health-dot.down { background: var(--c-err); animation: hdot-blink 1.2s ease-in-out infinite; }
-@keyframes hdot-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+.health-status-row.available    { border-color: color-mix(in oklab, var(--c-ok)   35%, var(--c-divider)); }
+.health-status-row.compromised  { border-color: color-mix(in oklab, var(--c-warn) 35%, var(--c-divider)); }
+.health-status-row.unavailable  { border-color: color-mix(in oklab, var(--c-err)  35%, var(--c-divider)); }
+.health-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; box-shadow: 0 0 0 1.5px var(--c-muted); }
+.health-dot.available   { background: var(--c-ok); }
+.health-dot.compromised { background: var(--c-warn); animation: health-blink-warn 1.2s ease-in-out infinite; }
+.health-dot.unavailable { background: var(--c-err);  animation: health-blink-err  1.2s ease-in-out infinite; }
 .health-label { font-size: 12.5px; font-weight: 600; color: var(--c-text); flex: 1; }
 .health-time  { font-size: 11px; color: var(--c-muted); font-family: var(--font-mono); }
 .health-err-text { font-size: 11px; color: var(--c-err); margin-top: 6px; font-family: var(--font-mono); }

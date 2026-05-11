@@ -10,3 +10,12 @@ body {
   font-feature-settings: 'cv11', 'ss01';
 }
 input, select, textarea, button { font-family: inherit; }
+
+@keyframes health-blink-warn {
+  0%, 100% { background-color: var(--c-warn); }
+  50%       { background-color: color-mix(in oklab, var(--c-warn) 20%, transparent); }
+}
+@keyframes health-blink-err {
+  0%, 100% { background-color: var(--c-err); }
+  50%       { background-color: color-mix(in oklab, var(--c-err) 20%, transparent); }
+}

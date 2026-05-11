@@ -79,7 +79,9 @@ const VIEWS = [
 const health = useHealthStore()
 const logoDotClass = computed(() => {
   if (!health.hasMonitored) return ''
-  return health.anyDown ? 'dot-down' : 'dot-up'
+  if (health.anyDown) return 'dot-down'
+  if (health.anyCompromised) return 'dot-warn'
+  return 'dot-up'
 })
 </script>
 
@@ -101,7 +103,8 @@ const logoDotClass = computed(() => {
   transition: background .3s;
 }
 .logo-dot.dot-up   { background: var(--c-ok); }
-.logo-dot.dot-down { background: var(--c-err); animation: ldot-blink 1.2s ease-in-out infinite; }
+.logo-dot.dot-warn { background: var(--c-warn); animation: ldot-blink 1.2s ease-in-out infinite; }
+.logo-dot.dot-down { background: var(--c-err);  animation: ldot-blink 1.2s ease-in-out infinite; }
 @keyframes ldot-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 .logo-text { display: flex; flex-direction: column; line-height: 1.15; }
 .logo-title { font-size: 13.5px; font-weight: 600; color: var(--c-text); letter-spacing: -0.005em; }

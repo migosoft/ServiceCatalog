@@ -125,13 +125,14 @@
           </text>
 
           <!-- Health status dot -->
-          <g v-if="healthStore.statusOf(n.id)" :transform="`translate(${nodeW(n) - 9}, 9)`" style="pointer-events:none">
-            <circle cx="0" cy="0" r="4.5" fill="var(--c-panel)" />
-            <circle cx="0" cy="0" r="3.5"
-                    :fill="healthStore.statusOf(n.id)!.isAvailable ? 'var(--c-ok)' : 'var(--c-err)'"
-                    stroke="var(--c-panel)" stroke-width="1.2">
-              <animate v-if="!healthStore.statusOf(n.id)!.isAvailable"
-                       attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite" />
+          <g v-if="healthStore.displayStatus(n.id) !== 'none'" :transform="`translate(${nodeW(n) - 9}, 9)`" style="pointer-events:none">
+            <circle cx="0" cy="0" r="4"
+                    :fill="healthStore.displayStatus(n.id) === 'unavailable' ? 'var(--c-err)'
+                         : healthStore.displayStatus(n.id) === 'compromised'  ? 'var(--c-warn)'
+                         : 'var(--c-ok)'"
+                    stroke="var(--c-muted)" stroke-width="1.5">
+              <animate v-if="healthStore.displayStatus(n.id) !== 'available'"
+                       attributeName="fill-opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite" />
             </circle>
           </g>
         </g>

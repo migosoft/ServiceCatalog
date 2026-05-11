@@ -23,9 +23,9 @@
               </span>
               <span class="card-type">{{ n.type }}</span>
               <div class="spacer" />
-              <span v-if="healthStore.statusOf(n.id)"
+              <span v-if="healthStore.displayStatus(n.id) !== 'none'"
                     class="status-dot"
-                    :class="healthStore.statusOf(n.id)!.isAvailable ? 'ok' : 'down'" />
+                    :class="healthStore.displayStatus(n.id)" />
             </div>
             <div class="card-name">{{ n.name }}</div>
             <div v-if="n.description" class="card-desc">{{ n.description }}</div>
@@ -119,10 +119,10 @@ const totalNodes = computed(() => props.nodes.length)
 .card-icon.database { background: var(--c-database); color: var(--c-text); }
 .card-type { font-size: 10.5px; font-weight: 600; color: var(--c-muted); text-transform: uppercase; letter-spacing: .08em; }
 .spacer { flex: 1; }
-.status-dot { width: 6px; height: 6px; border-radius: 999px; }
-.status-dot.ok   { background: var(--c-ok); }
-.status-dot.down { background: var(--c-err); animation: sdot-blink 1.2s ease-in-out infinite; }
-@keyframes sdot-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+.status-dot { width: 6px; height: 6px; border-radius: 999px; box-shadow: 0 0 0 1px var(--c-muted); }
+.status-dot.available   { background: var(--c-ok); }
+.status-dot.compromised { background: var(--c-warn); animation: health-blink-warn 1.2s ease-in-out infinite; }
+.status-dot.unavailable { background: var(--c-err);  animation: health-blink-err  1.2s ease-in-out infinite; }
 .card-name { font-size: 14px; font-weight: 600; color: var(--c-text); font-family: var(--font-mono); margin-bottom: 4px; }
 .card-desc {
   font-size: 12px; color: var(--c-text-2); line-height: 1.5; margin-bottom: 10px;

@@ -34,9 +34,9 @@ export const palette = {
   edgeRequires:  '#E25A1C',   // dashed accent
 
   // Status
-  ok:            '#4F8B3A',
-  warn:          '#C58A1B',
-  err:           '#C84128',
+  ok:            '#00bf7f',
+  warn:          '#FFF700',
+  err:           '#FF2C2C',
 } as const
 
 export type Palette = typeof palette
