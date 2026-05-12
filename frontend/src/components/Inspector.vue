@@ -69,7 +69,26 @@
             </div>
             <div class="editable-row">
               <label class="er-label">Address</label>
+              <div v-if="node.type === 'Service'" class="er-url-wrap">
+                <input
+                  :value="node.properties?.['address'] ?? ''"
+                  class="er-input"
+                  placeholder="—"
+                  @change="patch('address', ($event.target as HTMLInputElement).value)"
+                />
+                <a
+                  v-if="node.properties?.['address']"
+                  :href="node.properties['address']"
+                  target="_blank" rel="noopener noreferrer"
+                  class="er-link-btn" title="Open address"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+              </div>
               <input
+                v-else
                 :value="node.properties?.['address'] ?? ''"
                 class="er-input"
                 placeholder="—"

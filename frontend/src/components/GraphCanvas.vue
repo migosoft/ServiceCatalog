@@ -265,11 +265,13 @@ const _wCache: Record<string, number> = {}
 const NODE_FONT = '600 13px Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif'
 
 function nodeW(n: NodeDto): number {
-  if (_wCache[n.name] != null) return _wCache[n.name]
+  const cached = _wCache[n.name]
+  if (cached != null) return cached
   _mctx.font = NODE_FONT
   const w = _mctx.measureText(n.name).width
-  _wCache[n.name] = Math.max(MIN_W, Math.min(MAX_W, Math.ceil(w + TEXT_X + 14)))
-  return _wCache[n.name]
+  const result = Math.max(MIN_W, Math.min(MAX_W, Math.ceil(w + TEXT_X + 14)))
+  _wCache[n.name] = result
+  return result
 }
 
 function nodeTransform(n: NodeDto): string {
@@ -285,6 +287,7 @@ const _sim: Record<string, Particle> = {}
 let _simRunning = false
 let _raf = 0
 let _drag: { id: string; tx: number; ty: number } | null = null
+let _initialized = false
 
 const REPULSION = 7000
 const ANCHOR_K  = 0.022
@@ -293,24 +296,16 @@ const EDGE_REST = 190
 const DAMPING   = 0.78
 const DT        = 1
 
-function _startSim() {
-  if (_simRunning) return
-  _simRunning = true
-  _simStep()
-}
+// One physics tick — returns kinetic energy (no drag, no position writes)
+function _tick(): number {
+  const particles = Object.values(_sim)
+  for (const p of particles) { p.fx = 0; p.fy = 0 }
 
-function _simStep() {
-  const ids = Object.keys(_sim)
-  for (const id of ids) { _sim[id].fx = 0; _sim[id].fy = 0 }
-
-  // Anchor spring
-  for (const id of ids) {
-    const p = _sim[id]
+  for (const p of particles) {
     p.fx += (p.hx - p.x) * ANCHOR_K
     p.fy += (p.hy - p.y) * ANCHOR_K
   }
 
-  // Edge springs
   for (const e of props.edges) {
     const a = _sim[e.fromId], b = _sim[e.toId]
     if (!a || !b) continue
@@ -322,11 +317,10 @@ function _simStep() {
     b.fx -= ux * f; b.fy -= uy * f
   }
 
-  // Pairwise repulsion
-  for (let i = 0; i < ids.length; i++) {
-    const a = _sim[ids[i]]
-    for (let j = i + 1; j < ids.length; j++) {
-      const b = _sim[ids[j]]
+  for (let i = 0; i < particles.length; i++) {
+    const a = particles[i]!
+    for (let j = i + 1; j < particles.length; j++) {
+      const b = particles[j]!
       const dx = b.x - a.x, dy = b.y - a.y
       const d2 = dx * dx + dy * dy + 80
       if (d2 > 360 * 360) continue
@@ -338,34 +332,54 @@ function _simStep() {
     }
   }
 
-  // Integrate
   let energy = 0
-  for (const id of ids) {
-    const p = _sim[id]
+  for (const p of particles) {
     p.vx = (p.vx + p.fx * DT) * DAMPING
     p.vy = (p.vy + p.fy * DT) * DAMPING
     p.x += p.vx * DT
     p.y += p.vy * DT
     energy += p.vx * p.vx + p.vy * p.vy
   }
+  return energy
+}
+
+// Run simulation to convergence synchronously, then write positions
+function _prewarm(maxSteps = 500) {
+  for (let i = 0; i < maxSteps; i++) {
+    if (_tick() < 0.08) break
+  }
+  for (const [id, p] of Object.entries(_sim)) {
+    positions[id] = { x: p.x, y: p.y }
+  }
+}
+
+function _startSim() {
+  if (_simRunning) return
+  _simRunning = true
+  _simStep()
+}
+
+function _simStep() {
+  const energy = _tick()
 
   // Drag override
-  if (_drag && _sim[_drag.id]) {
+  if (_drag) {
     const p = _sim[_drag.id]
-    p.vx = _drag.tx - p.x
-    p.vy = _drag.ty - p.y
-    p.x  = _drag.tx
-    p.y  = _drag.ty
-    energy = Math.max(energy, 1)
+    if (p) {
+      p.vx = _drag.tx - p.x
+      p.vy = _drag.ty - p.y
+      p.x  = _drag.tx
+      p.y  = _drag.ty
+    }
   }
 
   // Write to reactive positions (Vue batches to next microtask)
-  for (const id of ids) {
+  for (const [id, p] of Object.entries(_sim)) {
     if (positions[id]) {
-      positions[id].x = _sim[id].x
-      positions[id].y = _sim[id].y
+      positions[id].x = p.x
+      positions[id].y = p.y
     } else {
-      positions[id] = { x: _sim[id].x, y: _sim[id].y }
+      positions[id] = { x: p.x, y: p.y }
     }
   }
 
@@ -378,6 +392,7 @@ function _simStep() {
 
 function _computeHomes(): Record<string, { x: number; y: number }> {
   const nodes  = props.nodes
+  const edges  = props.edges
   const layout = props.layout ?? 'cose'
 
   if (layout === 'circle') {
@@ -403,20 +418,108 @@ function _computeHomes(): Record<string, { x: number; y: number }> {
     return out
   }
 
-  // Default: type-based 3-column (cose uses physics on top of this)
-  const byType: Record<string, NodeDto[]> = { Service: [], Server: [], Database: [] }
-  nodes.forEach(n => (byType[n.type] ??= []).push(n))
+  // ── Default / cose: hierarchical layout ─────────────────────────────────
+  // Edge A→B means "A depends on B".
+  // Rank 0 = leaves (no outgoing edges, e.g. pure Servers).
+  // Higher rank = further up the dependency chain.
+  // Visual: rank 0 at the bottom, highest rank at the top.
+
+  // out-degree and reverse adjacency
+  const outDegMap  = new Map<string, number>()
+  const dependents = new Map<string, string[]>()
+  nodes.forEach(n => { outDegMap.set(n.id, 0); dependents.set(n.id, []) })
+  edges.forEach(e => {
+    if (outDegMap.has(e.fromId)) outDegMap.set(e.fromId, (outDegMap.get(e.fromId) ?? 0) + 1)
+    const deps = dependents.get(e.toId)
+    if (deps) deps.push(e.fromId)
+  })
+
+  // Longest-path ranking via BFS from sinks (outDeg = 0)
+  const rankMap      = new Map<string, number>()
+  const processedMap = new Map<string, number>()
+  nodes.forEach(n => processedMap.set(n.id, 0))
+
+  const queue: string[] = []
+  nodes.forEach(n => {
+    if ((outDegMap.get(n.id) ?? 0) === 0) { rankMap.set(n.id, 0); queue.push(n.id) }
+  })
+  for (let head = 0; head < queue.length; head++) {
+    const id      = queue[head] as string
+    const idRank  = rankMap.get(id) ?? 0
+    for (const depId of (dependents.get(id) ?? [])) {
+      const newRank = Math.max(rankMap.get(depId) ?? 0, idRank + 1)
+      rankMap.set(depId, newRank)
+      const proc = (processedMap.get(depId) ?? 0) + 1
+      processedMap.set(depId, proc)
+      if (proc >= (outDegMap.get(depId) ?? 0)) queue.push(depId)
+    }
+  }
+  // Nodes in cycles / isolated: place above all ranked nodes
+  const maxRank = nodes.reduce((m, n) => Math.max(m, rankMap.get(n.id) ?? 0), 0)
+  nodes.forEach(n => { if (!rankMap.has(n.id)) rankMap.set(n.id, maxRank + 1) })
+
+  // Group by rank, alphabetical initial order within each layer
+  const byRank = new Map<number, NodeDto[]>()
+  nodes.forEach(n => {
+    const r = rankMap.get(n.id) ?? 0
+    const layer = byRank.get(r) ?? []
+    layer.push(n)
+    byRank.set(r, layer)
+  })
+  byRank.forEach(layer => layer.sort((a, b) => a.name.localeCompare(b.name)))
+
+  // Barycenter heuristic: one bottom-up pass to reduce edge crossings
+  const xIdx = new Map<string, number>()
+  const rankLevels = [...byRank.keys()].sort((a, b) => a - b)
+  rankLevels.forEach(r => (byRank.get(r) ?? []).forEach((n, i) => xIdx.set(n.id, i)))
+
+  for (const r of rankLevels) {
+    if (r === 0) continue
+    const layer = byRank.get(r) ?? []
+    const scores = layer.map(n => {
+      const nbIdxs: number[] = []
+      edges.forEach(e => {
+        if (e.fromId === n.id && rankMap.get(e.toId) === r - 1) {
+          const ix = xIdx.get(e.toId); if (ix != null) nbIdxs.push(ix)
+        }
+        if (e.toId === n.id && rankMap.get(e.fromId) === r - 1) {
+          const ix = xIdx.get(e.fromId); if (ix != null) nbIdxs.push(ix)
+        }
+      })
+      return nbIdxs.length ? nbIdxs.reduce((a, b) => a + b, 0) / nbIdxs.length : (xIdx.get(n.id) ?? 0)
+    })
+    const reordered = layer
+      .map((n, i) => ({ n, s: scores[i] ?? 0 }))
+      .sort((a, b) => a.s - b.s)
+    reordered.forEach((item, i) => xIdx.set(item.n.id, i))
+    byRank.set(r, reordered.map(item => item.n))
+  }
+
+  // Assign positions: exact node widths + fixed gaps, rank 0 at bottom
+  const cx    = size.w > 0 ? size.w / 2 : 500
+  const H_GAP = 50
+  const V_GAP = 160
   const out: Record<string, { x: number; y: number }> = {}
-  ;['Service', 'Server', 'Database'].forEach((t, col) => {
-    ;(byType[t] || []).forEach((n, i) => {
-      out[n.id] = { x: 180 + col * 300, y: 120 + i * 110 }
+
+  rankLevels.forEach((r, ri) => {
+    const y     = (rankLevels.length - 1 - ri) * V_GAP + 80
+    const layer = byRank.get(r) ?? []
+    const ws    = layer.map(n => nodeW(n))
+    const totalW = ws.reduce((a, b) => a + b, 0) + H_GAP * Math.max(0, layer.length - 1)
+    let x = cx - totalW / 2
+    layer.forEach((n, i) => {
+      const w = ws[i] ?? 0
+      out[n.id] = { x: x + w / 2, y }
+      x += w + H_GAP
     })
   })
+
   return out
 }
 
 function _syncSim() {
   const homes = _computeHomes()
+  const isInit = !_initialized && props.nodes.length > 0
   const next: Record<string, Particle> = {}
   props.nodes.forEach(n => {
     const home = homes[n.id] ?? { x: 300, y: 300 }
@@ -429,6 +532,11 @@ function _syncSim() {
   // prune removed nodes
   for (const k in _sim) { if (!next[k]) delete _sim[k] }
   Object.assign(_sim, next)
+  if (isInit) {
+    _initialized = true
+    _prewarm()
+    fitView()
+  }
   _startSim()
 }
 
