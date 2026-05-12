@@ -1,6 +1,6 @@
 # ServiceCatalog
 
-A self-hosted service catalog that maps your infrastructure as a live dependency graph. Track services, servers, and databases, model how they relate to each other, and monitor their availability in real time.
+A simple self-hosted service catalog that maps your infrastructure as a dependency graph. Track services, servers, and databases, model how they relate to each other, and monitor their availability in real time.
 
 ![Graph View showing nodes and edges](docs/graph-preview.png)
 
@@ -20,7 +20,7 @@ A self-hosted service catalog that maps your infrastructure as a live dependency
 |---|---|
 | **Service** | Address (clickable link), Code Repository (clickable link), Documentation URL (clickable link) |
 | **Server** | Operating System (Windows / Linux) |
-| **Database** | Database type (80+ engines supported) |
+| **Database** | Database type |
 
 All nodes share: Name, Owner, Address, Description.
 
