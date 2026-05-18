@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.NetworkInformation;
 using System.Threading.Channels;
 using ServiceCatalog.Api.Models;
+using ServiceCatalog.Api.Services.DatabaseHealthCheckers;
 
 namespace ServiceCatalog.Api.Services;
 
@@ -10,6 +11,7 @@ public sealed class HealthCheckService : BackgroundService
     private readonly Neo4jService _neo4j;
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly ILogger<HealthCheckService> _log;
+    private readonly IReadOnlyDictionary<string, IDatabaseHealthChecker> _dbCheckers;
 
     private readonly ConcurrentDictionary<string, HealthCheckConfig> _configs  = new();
     private readonly ConcurrentDictionary<string, HealthStatusDto>   _statuses = new();
@@ -18,10 +20,11 @@ public sealed class HealthCheckService : BackgroundService
     private readonly object _subLock = new();
     private readonly List<ChannelWriter<HealthStatusDto>> _subscribers = new();
 
-    public HealthCheckService(Neo4jService neo4j, ILogger<HealthCheckService> log)
+    public HealthCheckService(Neo4jService neo4j, ILogger<HealthCheckService> log, IEnumerable<IDatabaseHealthChecker> dbCheckers)
     {
-        _neo4j = neo4j;
-        _log   = log;
+        _neo4j      = neo4j;
+        _log        = log;
+        _dbCheckers = dbCheckers.ToDictionary(c => c.CheckType, StringComparer.OrdinalIgnoreCase);
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -88,7 +91,9 @@ public sealed class HealthCheckService : BackgroundService
 
         var (available, error) = cfg.CheckType == "ping"
             ? await RunPingAsync(cfg.CheckTarget, cfg.RetryCount, ct)
-            : await RunHttpAsync(cfg.CheckTarget, cfg.RetryCount, ct);
+            : _dbCheckers.TryGetValue(cfg.CheckType, out var checker)
+                ? await checker.CheckAsync(cfg.CheckTarget, cfg.RetryCount, ct)
+                : await RunHttpAsync(cfg.CheckTarget, cfg.RetryCount, ct);
 
         var status = new HealthStatusDto(cfg.NodeId, available, DateTimeOffset.UtcNow, error);
         _statuses[cfg.NodeId] = status;

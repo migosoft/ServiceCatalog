@@ -1,8 +1,10 @@
 using ServiceCatalog.Api.Endpoints;
 using ServiceCatalog.Api.Services;
+using ServiceCatalog.Api.Services.DatabaseHealthCheckers;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddSingleton<IDatabaseHealthChecker, MsSqlHealthChecker>();
 builder.Services.AddSingleton<Neo4jService>();
 builder.Services.AddSingleton<HealthCheckService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<HealthCheckService>());

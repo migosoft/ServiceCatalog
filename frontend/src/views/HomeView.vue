@@ -188,13 +188,14 @@ async function onPatchNode(id: string, data: Partial<NodeDto>) {
   const node = store.nodes.find(n => n.id === id)
   if (!node) return
   const d = data as any
-  const name            = d.name            ?? node.name
-  const description     = d.description     ?? node.description
-  const owner           = ('owner'    in d ? d.owner    : node.properties?.['owner'])    ?? ''
-  const operatingSystem = ('os'       in d ? d.os       : node.properties?.['os'])       ?? ''
-  const address         = ('address'  in d ? d.address  : node.properties?.['address'])  ?? ''
-  const dbType          = ('db_type'  in d ? d.db_type  : node.properties?.['db_type'])  ?? ''
-  const codeRepository  = ('code_repo' in d ? d.code_repo : node.properties?.['code_repo']) ?? ''
+  const name             = d.name            ?? node.name
+  const description      = d.description     ?? node.description
+  const owner            = ('owner'    in d ? d.owner    : node.properties?.['owner'])    ?? ''
+  const operatingSystem  = ('os'       in d ? d.os       : node.properties?.['os'])       ?? ''
+  const address          = ('address'  in d ? d.address  : node.properties?.['address'])  ?? ''
+  const dbType           = ('db_type'  in d ? d.db_type  : node.properties?.['db_type'])  ?? ''
+  const databaseAddress  = ('database_address' in d ? d.database_address  : node.properties?.['database_address'])  ?? ''
+  const codeRepository   = ('code_repo' in d ? d.code_repo : node.properties?.['code_repo']) ?? ''
   const documentationUrl = ('docs_url'  in d ? d.docs_url  : node.properties?.['docs_url'])  ?? ''
   await store.updateNode(id, {
     name, description,
@@ -202,6 +203,7 @@ async function onPatchNode(id: string, data: Partial<NodeDto>) {
     owner:            owner            || undefined,
     address:          address          || undefined,
     dbType:           dbType           || undefined,
+    databaseAddress:  databaseAddress  || undefined,
     codeRepository:   codeRepository   || undefined,
     documentationUrl: documentationUrl || undefined,
   })

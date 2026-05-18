@@ -64,6 +64,14 @@
             </select>
           </div>
 
+          <!-- Database Address (MSSQL only) -->
+          <div v-if="form.type === 'Database' && form.dbType === 'Microsoft SQL Server'" class="field">
+            <label class="field-label">Database Address</label>
+            <input v-model="form.databaseAddress" class="field-input" autocomplete="off"
+                   placeholder="Databse Address (not used for health checks / monitoring)" />
+            <span class="field-hint">Enables automatic database health monitoring.</span>
+          </div>
+
           <!-- Code Repository (Service only) -->
           <div v-if="form.type === 'Service'" class="field">
             <label class="field-label">Code Repository</label>
@@ -135,12 +143,13 @@ const form = reactive({
   type: props.node?.type ?? 'Service',
   name: props.node?.name ?? '',
   description: props.node?.description ?? '',
-  os:              props.node?.properties?.['os']        ?? 'Linux',
-  owner:           props.node?.properties?.['owner']     ?? '',
-  address:         props.node?.properties?.['address']   ?? '',
-  dbType:          props.node?.properties?.['db_type']   ?? '',
-  codeRepository:  props.node?.properties?.['code_repo'] ?? '',
-  documentationUrl: props.node?.properties?.['docs_url'] ?? '',
+  os:               props.node?.properties?.['os']                ?? 'Linux',
+  owner:            props.node?.properties?.['owner']             ?? '',
+  address:          props.node?.properties?.['address']           ?? '',
+  dbType:           props.node?.properties?.['db_type']           ?? '',
+  databaseAddress:  props.node?.properties?.['database_address']  ?? '',
+  codeRepository:   props.node?.properties?.['code_repo']         ?? '',
+  documentationUrl: props.node?.properties?.['docs_url']          ?? '',
 })
 
 async function submit() {
@@ -148,16 +157,18 @@ async function submit() {
   error.value = null
   try {
     let saved: NodeDto
-    const os      = form.type === 'Server'   ? form.os              : undefined
-    const owner   = form.owner.trim()   || undefined
-    const address = form.address.trim() || undefined
-    const dbType  = form.type === 'Database' ? form.dbType.trim() || undefined : undefined
-    const codeRepository  = form.type === 'Service' ? form.codeRepository.trim()  || undefined : undefined
+    const os               = form.type === 'Server'   ? form.os                                               : undefined
+    const owner            = form.owner.trim()   || undefined
+    const address          = form.address.trim() || undefined
+    const dbType           = form.type === 'Database' ? form.dbType.trim()           || undefined : undefined
+    const databaseAddress  = form.type === 'Database' && form.dbType === 'Microsoft SQL Server'
+      ? form.databaseAddress.trim()  || undefined : undefined
+    const codeRepository   = form.type === 'Service' ? form.codeRepository.trim()  || undefined : undefined
     const documentationUrl = form.type === 'Service' ? form.documentationUrl.trim() || undefined : undefined
     if (props.node) {
-      saved = await store.updateNode(props.node.id, { name: form.name, description: form.description, operatingSystem: os, owner, address, dbType, codeRepository, documentationUrl })
+      saved = await store.updateNode(props.node.id, { name: form.name, description: form.description, operatingSystem: os, owner, address, dbType, databaseAddress, codeRepository, documentationUrl })
     } else {
-      saved = await store.createNode({ type: form.type, name: form.name, description: form.description, operatingSystem: os, owner, address, dbType, codeRepository, documentationUrl })
+      saved = await store.createNode({ type: form.type, name: form.name, description: form.description, operatingSystem: os, owner, address, dbType, databaseAddress, codeRepository, documentationUrl })
     }
     emit('saved', saved)
     emit('close')
@@ -225,4 +236,5 @@ textarea.field-input { resize: vertical; line-height: 1.5; }
 }
 .btn-secondary:hover { background: var(--c-panel-2); }
 .error-msg { font-size: 12px; color: var(--c-err); }
+.field-hint { font-size: 11px; color: var(--c-muted); }
 </style>

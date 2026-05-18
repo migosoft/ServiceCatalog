@@ -30,13 +30,13 @@ export const useCatalogStore = defineStore('catalog', () => {
     return catalogApi.getNeighbors(id)
   }
 
-  async function createNode(data: { type: string; name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string; codeRepository?: string; documentationUrl?: string }) {
+  async function createNode(data: { type: string; name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string; databaseAddress?: string; codeRepository?: string; documentationUrl?: string }) {
     const node = await catalogApi.createNode(data)
     nodes.value.push(node)
     return node
   }
 
-  async function updateNode(id: string, data: { name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string; codeRepository?: string; documentationUrl?: string }) {
+  async function updateNode(id: string, data: { name: string; description?: string; operatingSystem?: string; owner?: string; address?: string; dbType?: string; databaseAddress?: string; codeRepository?: string; documentationUrl?: string }) {
     const updated = await catalogApi.updateNode(id, data)
     const idx = nodes.value.findIndex(n => n.id === id)
     if (idx !== -1) nodes.value[idx] = updated

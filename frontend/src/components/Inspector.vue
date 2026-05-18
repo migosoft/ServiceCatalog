@@ -28,7 +28,7 @@
         @click="tab = t.id"
       >
         {{ t.label }}
-        <span v-if="t.id === 'connections'" class="tab-count">{{ allRels.length }}</span>
+        <span v-if="t.id === 'relations'" class="tab-count">{{ allRels.length }}</span>
         <span v-if="t.id === 'monitor' && nodeDispStatus !== 'none'"
               class="tab-health-dot"
               :class="nodeDispStatus" />
@@ -191,56 +191,113 @@
           <div v-if="nodeStatus.error" class="health-err-text">{{ nodeStatus.error }}</div>
         </div>
 
-        <div class="section">
-          <div class="section-label-row">
-            <span class="section-label">{{ nodeConfig ? 'Configuration' : 'Enable monitoring' }}</span>
-            <span class="check-type-badge" :class="node.type === 'Server' ? 'ping' : 'http'">
-              {{ node.type === 'Server' ? 'ICMP Ping' : 'HTTP GET' }}
-            </span>
+        <!-- MSSQL: auto-configured via connection string -->
+        <template v-if="isMssqlNode">
+          <div class="section">
+            <div class="section-label-row">
+              <span class="section-label">{{ nodeConfig ? 'Configuration' : 'Enable monitoring' }}</span>
+              <span class="check-type-badge db">DB Health</span>
+            </div>
+            <div class="editable-rows">
+              <div class="editable-row">
+                <label class="er-label">Conn. String</label>
+                <input
+                  :value="node.properties?.['database_address'] ?? ''"
+                  class="er-input"
+                  placeholder="Server=…;Database=…"
+                  type="password"
+                  autocomplete="off"
+                  @change="patch('database_address', ($event.target as HTMLInputElement).value)"
+                />
+              </div>
+              <div class="editable-row">
+                <label class="er-label">Interval</label>
+                <select v-model.number="monitorForm.intervalSeconds" class="er-input er-select">
+                  <option :value="15">15 s</option>
+                  <option :value="30">30 s</option>
+                  <option :value="60">1 min</option>
+                  <option :value="300">5 min</option>
+                  <option :value="900">15 min</option>
+                </select>
+              </div>
+              <div class="editable-row">
+                <label class="er-label">Retries</label>
+                <select v-model.number="monitorForm.retryCount" class="er-input er-select">
+                  <option :value="0">0</option>
+                  <option :value="1">1</option>
+                  <option :value="2">2</option>
+                  <option :value="3">3</option>
+                  <option :value="5">5</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div class="editable-rows">
-            <div class="editable-row">
-              <label class="er-label">{{ node.type === 'Server' ? 'Address' : 'URL' }}</label>
-              <input v-model="monitorForm.checkTarget" class="er-input"
-                     :placeholder="node.type === 'Server' ? 'hostname or IP' : 'https://…/health'" />
+
+          <p v-if="monitorError" class="error-msg">{{ monitorError }}</p>
+
+          <div class="monitor-btns">
+            <button class="btn-save" :disabled="!node.properties?.['database_address'] || monitorSubmitting" @click="saveMonitor">
+              {{ nodeConfig ? 'Update' : 'Enable' }}
+            </button>
+            <button v-if="nodeConfig" class="btn-remove" :disabled="monitorSubmitting" @click="removeMonitor">
+              Remove
+            </button>
+          </div>
+        </template>
+
+        <!-- Standard HTTP / Ping monitor form -->
+        <template v-else>
+          <div class="section">
+            <div class="section-label-row">
+              <span class="section-label">{{ nodeConfig ? 'Configuration' : 'Enable monitoring' }}</span>
+              <span class="check-type-badge" :class="node.type === 'Server' ? 'ping' : 'http'">
+                {{ node.type === 'Server' ? 'ICMP Ping' : 'HTTP GET' }}
+              </span>
             </div>
-            <div class="editable-row">
-              <label class="er-label">Interval</label>
-              <select v-model.number="monitorForm.intervalSeconds" class="er-input er-select">
-                <option :value="15">15 s</option>
-                <option :value="30">30 s</option>
-                <option :value="60">1 min</option>
-                <option :value="300">5 min</option>
-                <option :value="900">15 min</option>
-              </select>
-            </div>
-            <div class="editable-row">
-              <label class="er-label">Retries</label>
-              <select v-model.number="monitorForm.retryCount" class="er-input er-select">
-                <option :value="0">0</option>
-                <option :value="1">1</option>
-                <option :value="2">2</option>
-                <option :value="3">3</option>
-                <option :value="5">5</option>
-              </select>
+            <div class="editable-rows">
+              <div class="editable-row">
+                <label class="er-label">{{ node.type === 'Server' ? 'Address' : 'URL' }}</label>
+                <input v-model="monitorForm.checkTarget" class="er-input"
+                       :placeholder="node.type === 'Server' ? 'hostname or IP' : 'https://…/health'" />
+              </div>
+              <div class="editable-row">
+                <label class="er-label">Interval</label>
+                <select v-model.number="monitorForm.intervalSeconds" class="er-input er-select">
+                  <option :value="15">15 s</option>
+                  <option :value="30">30 s</option>
+                  <option :value="60">1 min</option>
+                  <option :value="300">5 min</option>
+                  <option :value="900">15 min</option>
+                </select>
+              </div>
+              <div class="editable-row">
+                <label class="er-label">Retries</label>
+                <select v-model.number="monitorForm.retryCount" class="er-input er-select">
+                  <option :value="0">0</option>
+                  <option :value="1">1</option>
+                  <option :value="2">2</option>
+                  <option :value="3">3</option>
+                  <option :value="5">5</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <p v-if="monitorError" class="error-msg">{{ monitorError }}</p>
+          <p v-if="monitorError" class="error-msg">{{ monitorError }}</p>
 
-        <div class="monitor-btns">
-          <button class="btn-save" :disabled="!monitorForm.checkTarget.trim() || monitorSubmitting" @click="saveMonitor">
-            {{ nodeConfig ? 'Update' : 'Enable' }}
-          </button>
-          <button v-if="nodeConfig" class="btn-remove" :disabled="monitorSubmitting" @click="removeMonitor">
-            Remove
-          </button>
-        </div>
+          <div class="monitor-btns">
+            <button class="btn-save" :disabled="!monitorForm.checkTarget.trim() || monitorSubmitting" @click="saveMonitor">
+              {{ nodeConfig ? 'Update' : 'Enable' }}
+            </button>
+            <button v-if="nodeConfig" class="btn-remove" :disabled="monitorSubmitting" @click="removeMonitor">
+              Remove
+            </button>
+          </div>
+        </template>
       </template>
 
-      <!-- Connections tab -->
-      <template v-if="tab === 'connections'">
+      <!-- Relations tab -->
+      <template v-if="tab === 'relations'">
         <template v-for="rt in ['REQUIRES', 'RUNS_ON']" :key="rt">
           <template v-if="byType[rt].out.length || byType[rt].in.length">
             <div class="section">
@@ -271,7 +328,7 @@
             </div>
           </template>
         </template>
-        <div v-if="!allRels.length" class="empty-state">No connections yet.</div>
+        <div v-if="!allRels.length" class="empty-state">No relations yet.</div>
       </template>
     </div>
 
@@ -329,13 +386,17 @@ const healthStore = useHealthStore()
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'connections', label: 'Connections' },
+  { id: 'relations', label: 'Relations' },
   { id: 'monitor', label: 'Monitor' },
 ]
 
 const nodeStatus      = computed(() => healthStore.statusOf(props.node.id))
 const nodeConfig      = computed(() => healthStore.configOf(props.node.id))
 const nodeDispStatus  = computed(() => healthStore.displayStatus(props.node.id))
+const isMssqlNode     = computed(() =>
+  props.node.type === 'Database' &&
+  props.node.properties?.['db_type'] === 'Microsoft SQL Server'
+)
 
 const monitorForm = reactive({ checkTarget: '', intervalSeconds: 30, retryCount: 3 })
 const monitorSubmitting = ref(false)
@@ -368,9 +429,15 @@ async function saveMonitor() {
   monitorSubmitting.value = true
   monitorError.value = null
   try {
+    const checkType   = props.node.type === 'Server' ? 'ping'
+                      : isMssqlNode.value            ? 'mssql'
+                      : 'http'
+    const checkTarget = isMssqlNode.value
+      ? (props.node.properties?.['database_address'] ?? '')
+      : monitorForm.checkTarget.trim()
     await healthStore.setConfig(props.node.id, {
-      checkType:       props.node.type === 'Server' ? 'ping' : 'http',
-      checkTarget:     monitorForm.checkTarget.trim(),
+      checkType,
+      checkTarget,
       intervalSeconds: monitorForm.intervalSeconds,
       retryCount:      monitorForm.retryCount,
     })
@@ -553,6 +620,8 @@ function patch(key: string, value: string) {
 }
 .check-type-badge.http { background: color-mix(in oklab, var(--c-accent) 12%, transparent); color: var(--c-accent); }
 .check-type-badge.ping { background: color-mix(in oklab, var(--c-server) 12%, transparent); color: var(--c-text-2); }
+.check-type-badge.db   { background: color-mix(in oklab, var(--c-database) 20%, transparent); color: var(--c-text-2); }
+.monitor-hint { font-size: 11.5px; color: var(--c-muted); margin: 0; line-height: 1.5; }
 .health-status-row {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px;
   border-radius: 7px; background: var(--c-panel-2); border: 1px solid var(--c-divider);
