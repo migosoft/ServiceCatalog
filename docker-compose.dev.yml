@@ -6,7 +6,7 @@ services:
       - "7474:7474"
       - "7687:7687"
     environment:
-      NEO4J_AUTH: neo4j_username/neo4j_password
+      NEO4J_AUTH: neo4j/neo4j_password
     volumes:
       - neo4j_data:/data
     healthcheck:
@@ -26,7 +26,7 @@ services:
       ASPNETCORE_URLS: http://+:5000
       ASPNETCORE_ENVIRONMENT: Development
       Neo4j__Uri: bolt://neo4j:7687
-      Neo4j__User: neo4j_username
+      Neo4j__User: neo4j
       Neo4j__Password: neo4j_password
     cap_add:
       - NET_RAW
