@@ -78,8 +78,8 @@
             <input v-model="form.codeRepository" class="field-input" placeholder="https://github.com/org/repo" />
           </div>
 
-          <!-- Documentation URL (Service only) -->
-          <div v-if="form.type === 'Service'" class="field">
+          <!-- Documentation URL -->
+          <div class="field">
             <label class="field-label">Documentation</label>
             <input v-model="form.documentationUrl" class="field-input" placeholder="https://docs.example.com" />
           </div>
