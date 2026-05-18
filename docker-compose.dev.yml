@@ -24,7 +24,7 @@ services:
       - "5000:5000"
     environment:
       ASPNETCORE_URLS: http://+:5000
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       Neo4j__Uri: bolt://neo4j:7687
       Neo4j__User: neo4j_username
       Neo4j__Password: neo4j_password
