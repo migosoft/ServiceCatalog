@@ -200,7 +200,7 @@
             </div>
             <div class="editable-rows">
               <div class="editable-row">
-                <label class="er-label">Conn. String</label>
+                <label class="er-label">Connection<br>String</label>
                 <input
                   :value="node.properties?.['database_address'] ?? ''"
                   class="er-input"
