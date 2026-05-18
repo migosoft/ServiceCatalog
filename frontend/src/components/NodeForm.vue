@@ -68,8 +68,7 @@
           <div v-if="form.type === 'Database' && form.dbType === 'Microsoft SQL Server'" class="field">
             <label class="field-label">Database Address</label>
             <input v-model="form.databaseAddress" class="field-input" autocomplete="off"
-                   placeholder="Databse Address (not used for health checks / monitoring)" />
-            <span class="field-hint">Enables automatic database health monitoring.</span>
+                   placeholder="Server=myserver;Database=mydb;User Id=sa;Password=…" />
           </div>
 
           <!-- Code Repository (Service only) -->

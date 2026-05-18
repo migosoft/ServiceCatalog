@@ -156,7 +156,7 @@ function toggleType(t: string) {
 // Resizable width
 const healthStore = useHealthStore()
 
-const sidebarWidth = ref(280)
+const sidebarWidth = ref(290)
 const resizing = ref(false)
 let _startX = 0, _startW = 0
 
