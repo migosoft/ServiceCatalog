@@ -191,8 +191,8 @@
           <div v-if="nodeStatus.error" class="health-err-text">{{ nodeStatus.error }}</div>
         </div>
 
-        <!-- MSSQL: auto-configured via connection string -->
-        <template v-if="isMssqlNode">
+        <!-- DB health (MSSQL / PostgreSQL): configured via connection string -->
+        <template v-if="isDbHealthNode">
           <div class="section">
             <div class="section-label-row">
               <span class="section-label">{{ nodeConfig ? 'Configuration' : 'Enable monitoring' }}</span>
@@ -204,7 +204,7 @@
                 <input
                   :value="node.properties?.['database_address'] ?? ''"
                   class="er-input"
-                  placeholder="Server=…;Database=…"
+                  :placeholder="isMssqlNode ? 'Server=…;Database=…;User Id=…;Password=…' : 'Host=…;Database=…;Username=…;Password=…'"
                   type="password"
                   autocomplete="off"
                   @change="patch('database_address', ($event.target as HTMLInputElement).value)"
@@ -397,6 +397,11 @@ const isMssqlNode     = computed(() =>
   props.node.type === 'Database' &&
   props.node.properties?.['db_type'] === 'Microsoft SQL Server'
 )
+const isPostgresNode  = computed(() =>
+  props.node.type === 'Database' &&
+  props.node.properties?.['db_type'] === 'PostgreSQL'
+)
+const isDbHealthNode  = computed(() => isMssqlNode.value || isPostgresNode.value)
 
 const monitorForm = reactive({ checkTarget: '', intervalSeconds: 30, retryCount: 3 })
 const monitorSubmitting = ref(false)
@@ -431,8 +436,9 @@ async function saveMonitor() {
   try {
     const checkType   = props.node.type === 'Server' ? 'ping'
                       : isMssqlNode.value            ? 'mssql'
+                      : isPostgresNode.value         ? 'postgres'
                       : 'http'
-    const checkTarget = isMssqlNode.value
+    const checkTarget = isDbHealthNode.value
       ? (props.node.properties?.['database_address'] ?? '')
       : monitorForm.checkTarget.trim()
     await healthStore.setConfig(props.node.id, {
